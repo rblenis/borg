@@ -217,7 +217,7 @@ cdef class NSIndex(IndexBase):
         assert segment <= _MAX_VALUE, "maximum number of segments reached"
         data[0] = _htole32(segment)
         data[1] = _htole32(value[1])
-        if not hashindex_set(self.index, <unsigned char *>key, data):
+        if not hashindex_set(self.index, <unsigned char *>key, <void *>data):
             raise Exception('hashindex_set failed')
 
     def __contains__(self, key):
@@ -309,7 +309,7 @@ cdef class ChunkIndex(IndexBase):
         data[0] = _htole32(refcount)
         data[1] = _htole32(value[1])
         data[2] = _htole32(value[2])
-        if not hashindex_set(self.index, <unsigned char *>key, data):
+        if not hashindex_set(self.index, <unsigned char *>key, <void *>data):
             raise Exception('hashindex_set failed')
 
     def __contains__(self, key):
@@ -443,7 +443,7 @@ cdef class ChunkIndex(IndexBase):
             values[1] = data[1]
             values[2] = data[2]
         else:
-            if not hashindex_set(self.index, key, data):
+            if not hashindex_set(self.index, key, <void *>data):
                 raise Exception('hashindex_set failed')
 
     def merge(self, ChunkIndex other):
