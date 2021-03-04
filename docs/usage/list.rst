@@ -32,3 +32,11 @@ Examples
     drwxrwxr-x user   user          0 Sun, 2015-02-01 11:00:00 code/myproject
     -rw-rw-r-- user   user    1416192 Sun, 2015-02-01 11:00:00 code/myproject/file.ext
     ...
+
+    $ borg list /path/to/repo::root-2016-02-15 --json-lines
+    {"type": "d", "mode": "drwxr-xr-x", "user": "root", "group": "root", "uid": 0, "gid": 0, "path": ".", 'size": 0, "mtime": "2016-02-15T17:44:27.0"}
+    {"type": "d", "mode": "drwxr-xr-x", "user": "root", "group": "root", "uid": 0, "gid": 0, "path": "bin", "size": 0, "mtime": "2016-02-15T19:04:49.0"}
+    {"type": "-", "mode": "-rwxr-xr-x", "user": "root", "group": "root", "uid": 0, "gid": 0, "path": "bin/bash", "size": 1029624, "mtime": "2014-11-13T00:08:51.0"}
+    {"type": "l", "mode": "lrwxrwxrwx", "user": "root", "group": "root", "uid": 0, "gid": 0, "path": "bin/bacmp", "size": 0, "mtime": "2015-03-27T20:24:26.0", "linktarget": "bzdiff"}
+    {"type": "-", "mode": "-rwxr-xr-x", "user": "root", "group": "root", "uid": 0, "gid": 0, "path": "bin/bzdiff", "size": 2140, "mtime": "2015-03-27T20:24:22.0"}
+    ...
