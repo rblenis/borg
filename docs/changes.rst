@@ -841,7 +841,7 @@ Other changes:
   - vagrant: new VMs for linux/bsd/darwin, most with OpenSSL 1.1 and py36
 
 
-Version 1.1.13 (2020-06-06)
+Version 1.1.15 (2020-12-25)
 ---------------------------
 
 Compatibility notes:
@@ -864,6 +864,135 @@ Compatibility notes:
   If WSL still has a problem with sync_file_range, you need to set
   BORG_WORKAROUNDS=basesyncfile in the borg process environment to
   work around the WSL issue.
+- 1.1.14 changes return codes due to a bug fix:
+  In case you have scripts expecting rc == 2 for a signal exit, you need to
+  update them to check for >= 128 (as documented since long).
+- 1.1.15 drops python 3.4 support, minimum requirement is 3.5 now.
+
+Fixes:
+
+- extract:
+
+  - improve exception handling when setting xattrs, #5092.
+  - emit a warning message giving the path, xattr key and error message.
+  - continue trying to restore other xattrs and bsdflags of the same file
+    after an exception with xattr-setting happened.
+- export-tar:
+
+  - set tar format to GNU_FORMAT explicitly, #5274
+  - fix memory leak with ssh: remote repository, #5568
+  - fix potential memory leak with ssh: remote repository with partial extraction
+- create: fix --dry-run and --stats coexistence, #5415
+- use --timestamp for {utcnow} and {now} if given, #5189
+
+New features:
+
+- create: implement --stdin-mode, --stdin-user and --stdin-group, #5333
+- allow appending the files cache filename with BORG_FILES_CACHE_SUFFIX env var
+
+Other changes:
+
+- drop python 3.4 support, minimum requirement is 3.5 now.
+- enable using libxxhash instead of bundled xxh64 code
+- update llfuse requirements (1.3.8)
+- set cython language_level in some files to fix warnings
+- allow EIO with warning when trying to hardlink
+- PropDict: fail early if internal_dict is not a dict
+- update shell completions
+- tests / CI
+
+  - add a test for the hashindex corruption bug, #5531 #4829
+  - fix spurious failure in test_cache_files, #5438
+  - added a github ci workflow
+  - reduce testing on travis, no macOS, no py3x-dev, #5467
+  - travis: use newer dists, native py on dist
+- vagrant:
+
+  - remove jessie and trusty boxes, #5348 #5383
+  - pyinstaller 4.0, build on py379
+  - binary build on stretch64, #5348
+  - remove easy_install based pip installation
+- docs:
+
+  - clarify '--one-file-system' for btrfs, #5391
+  - add example for excluding content using the --pattern cmd line arg
+  - complement the documentation for pattern files and exclude files, #5524
+  - made ansible playbook more generic, use package instead of pacman. also
+    change state from "latest" to "present".
+  - complete documentation on append-only remote repos, #5497
+  - internals: rather talk about target size than statistics, #5336
+  - new compression algorithm policy, #1633 #5505
+  - faq: add a hint on sleeping computer, #5301
+  - note requirements for full disk access on macOS Catalina, #5303
+  - fix/improve description of borg upgrade hardlink usage, #5518
+- modernize 1.1 code:
+
+  - drop code/workarounds only needed to support Python 3.4
+  - remove workaround for pre-release py37 argparse bug
+  - removed some outdated comments/docstrings
+  - requirements: remove some restrictions, lock on current versions
+
+
+Version 1.1.14 (2020-10-07)
+---------------------------
+
+Fixes:
+
+- check --repair: fix potential data loss when interrupting it, #5325
+- exit with 128 + signal number (as documented) when borg is killed by a signal, #5161
+- fix hardlinked CACHEDIR.TAG processing, #4911
+- create --read-special: .part files also should be regular files, #5217
+- llfuse dependency: choose least broken 1.3.6/1.3.7.
+  1.3.6 is broken on python 3.9, 1.3.7 is broken on FreeBSD.
+
+Other changes:
+
+- upgrade bundled xxhash to 0.7.4
+- self test: if it fails, also point to OS and hardware, #5334
+- pyinstaller: compute basepath from spec file location
+- prettier error message when archive gets too big, #5307
+- check/recreate are not "experimental" any more (but still potentially dangerous):
+
+  - recreate: remove extra confirmation
+  - rephrase some warnings, update docs, #5164
+- shell completions:
+
+  - misc. updates / fixes
+  - support repositories in fish tab completion, #5256
+  - complete $BORG_RECREATE_I_KNOW_WHAT_I_AM_DOING
+  - rewrite zsh completion:
+
+    - completion for almost all optional and positional arguments
+    - completion for Borg environment variables (parameters)
+- use "allow/deny list" instead of "white/black list" wording
+- declare "allow_cache_wipe" marker in setup.cfg to avoid pytest warning
+- vagrant / tests:
+
+  - misc. fixes / updates
+  - use python 3.5.10 for binary build
+  - build directory-based binaries additionally to the single file binaries
+  - add libffi-dev, required to build python
+  - use cryptography<3.0, more recent versions break the jessie box
+  - test on python 3.9
+  - do brew update with /dev/null redirect to avoid "too much log output" on travis-ci
+- docs:
+
+  - add ssh-agent pull backup method docs, #5288
+  - how to approach borg speed issues, #5371
+  - mention double --force in prune docs
+  - update Homebrew install instructions, #5185
+  - better description of how cache and rebuilds of it work
+  - point to borg create --list item flags in recreate usage, #5165
+  - add security faq explaining AES-CTR crypto issues, #5254
+  - add a note to create from stdin regarding files cache, #5180
+  - fix borg.1 manpage generation regression, #5211
+  - clarify how exclude options work in recreate, #5193
+  - add section for retired contributors
+  - hint about not misusing private email addresses of contributors for borg support
+
+
+Version 1.1.13 (2020-06-06)
+---------------------------
 
 Fixes:
 
@@ -918,20 +1047,6 @@ Version 1.1.11 (2020-03-08)
 
 Compatibility notes:
 
-- When upgrading from borg 1.0.x to 1.1.x, please note:
-
-  - read all the compatibility notes for 1.1.0*, starting from 1.1.0b1.
-  - borg upgrade: you do not need to and you also should not run it.
-  - borg might ask some security-related questions once after upgrading.
-    You can answer them either manually or via environment variable.
-    One known case is if you use unencrypted repositories, then it will ask
-    about a unknown unencrypted repository one time.
-  - your first backup with 1.1.x might be significantly slower (it might
-    completely read, chunk, hash a lot files) - this is due to the
-    --files-cache mode change (and happens every time you change mode).
-    You can avoid the one-time slowdown by using the pre-1.1.0rc4-compatible
-    mode (but that is less safe for detecting changed files than the default).
-    See the --files-cache docs for details.
 - 1.1.11 removes WSL autodetection (Windows 10 Subsystem for Linux).
   If WSL still has a problem with sync_file_range, you need to set
   BORG_WORKAROUNDS=basesyncfile in the borg process environment to
@@ -1098,23 +1213,6 @@ Other:
 
 Version 1.1.9 (2019-02-10)
 --------------------------
-
-Compatibility notes:
-
-- When upgrading from borg 1.0.x to 1.1.x, please note:
-
-  - read all the compatibility notes for 1.1.0*, starting from 1.1.0b1.
-  - borg upgrade: you do not need to and you also should not run it.
-  - borg might ask some security-related questions once after upgrading.
-    You can answer them either manually or via environment variable.
-    One known case is if you use unencrypted repositories, then it will ask
-    about a unknown unencrypted repository one time.
-  - your first backup with 1.1.x might be significantly slower (it might
-    completely read, chunk, hash a lot files) - this is due to the
-    --files-cache mode change (and happens every time you change mode).
-    You can avoid the one-time slowdown by using the pre-1.1.0rc4-compatible
-    mode (but that is less safe for detecting changed files than the default).
-    See the --files-cache docs for details.
 
 Fixes:
 
@@ -1394,20 +1492,6 @@ Version 1.1.4 (2017-12-31)
 
 Compatibility notes:
 
-- When upgrading from borg 1.0.x to 1.1.x, please note:
-
-  - read all the compatibility notes for 1.1.0*, starting from 1.1.0b1.
-  - borg upgrade: you do not need to and you also should not run it.
-  - borg might ask some security-related questions once after upgrading.
-    You can answer them either manually or via environment variable.
-    One known case is if you use unencrypted repositories, then it will ask
-    about a unknown unencrypted repository one time.
-  - your first backup with 1.1.x might be significantly slower (it might
-    completely read, chunk, hash a lot files) - this is due to the
-    --files-cache mode change (and happens every time you change mode).
-    You can avoid the one-time slowdown by using the pre-1.1.0rc4-compatible
-    mode (but that is less safe for detecting changed files than the default).
-    See the --files-cache docs for details.
 - borg 1.1.4 changes:
 
   - zstd compression is new in borg 1.1.4, older borg can't handle it.
