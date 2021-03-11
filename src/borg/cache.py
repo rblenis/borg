@@ -278,7 +278,7 @@ class CacheConfig:
         self.key_type = self._config.get('cache', 'key_type', fallback=None)
         self.ignored_features = set(parse_stringified_list(self._config.get('cache', 'ignored_features', fallback='')))
         self.mandatory_features = set(parse_stringified_list(self._config.get('cache', 'mandatory_features',
-            fallback='')))
+                                                                              fallback='')))
         try:
             self.integrity = dict(self._config.items('integrity'))
             if self._config.get('cache', 'manifest') != self.integrity.pop('manifest'):

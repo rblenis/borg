@@ -532,8 +532,8 @@ class Archiver:
                         except (FileNotFoundError, PermissionError) as e:
                             self.print_error('Failed to execute command: %s', e)
                             return self.exit_code
-                        status = fso.process_pipe(path=path, cache=cache, fd=proc.stdout, mode=mode, user=user,
-                                                  group=group)
+                        status = fso.process_pipe(path=path, cache=cache, fd=proc.stdout,
+                                                  mode=mode, user=user, group=group)
                         rc = proc.wait()
                         if rc != 0:
                             self.print_error('Command %r exited with status %d', args.paths[0], rc)
@@ -582,8 +582,8 @@ class Archiver:
                         group = args.stdin_group
                         if not dry_run:
                             try:
-                                status = fso.process_pipe(path=path, cache=cache, fd=sys.stdin.buffer, mode=mode,
-                                                          user=user, group=group)
+                                status = fso.process_pipe(path=path, cache=cache, fd=sys.stdin.buffer,
+                                                          mode=mode, user=user, group=group)
                             except BackupOSError as e:
                                 status = 'E'
                                 self.print_warning('%s: %s', path, e)
@@ -1128,8 +1128,8 @@ class Archiver:
             elif modebits == stat.S_IFIFO:
                 tarinfo.type = tarfile.FIFOTYPE
             else:
-                self.print_warning('%s: unsupported file type %o for tar export', remove_surrogates(item.path),
-                    modebits)
+                self.print_warning('%s: unsupported file type %o for tar export',
+                                   remove_surrogates(item.path), modebits)
                 set_ec(EXIT_WARNING)
                 return None, stream
             return tarinfo, stream
