@@ -395,7 +395,7 @@ class Archive:
         """Archive {} already exists"""
 
     class IncompatibleFilesystemEncodingError(Error):
-        """Failed to encode filename "{}" into file system encoding "{}". Consider configuring the LANG environment variable."""
+        """Failed to encode filename "{}" into file system encoding "{}". Consider configuring the LANG environment variable."""    # noqa: E501
 
     def __init__(self, repository, key, manifest, name, cache=None, create=False,
                  checkpoint_interval=1800, numeric_ids=False, noatime=False, noctime=False,
@@ -421,7 +421,8 @@ class Archive:
         self.noflags = noflags
         self.noacls = noacls
         self.noxattrs = noxattrs
-        assert (start is None) == (start_monotonic is None), 'Logic error: if start is given, start_monotonic must be given as well and vice versa.'
+        assert (start is None) == (start_monotonic is None), \
+            'Logic error: if start is given, start_monotonic must be given as well and vice versa.'
         if start is None:
             start = datetime.utcnow()
             start_monotonic = time.monotonic()
@@ -874,8 +875,8 @@ Utilization of max. archive size: {csize_max:.0%}
             if not self.noacls:
                 acl_set(path, item, self.numeric_ids, fd=fd)
             if not self.noxattrs:
-                # chown removes Linux capabilities, so set the extended attributes at the end, after chown, since they include
-                # the Linux capabilities in the "security.capability" attribute.
+                # chown removes Linux capabilities, so set the extended attributes at the end, after chown, since they
+                # include the Linux capabilities in the "security.capability" attribute.
                 warning = xattr.set_all(fd or path, item.get('xattrs', {}), follow_symlinks=False)
                 if warning:
                     set_ec(EXIT_WARNING)
@@ -934,7 +935,8 @@ Utilization of max. archive size: {csize_max:.0%}
         try:
             unpacker = msgpack.Unpacker(use_list=False)
             items_ids = self.metadata.items
-            pi = ProgressIndicatorPercent(total=len(items_ids), msg="Decrementing references %3.0f%%", msgid='archive.delete')
+            pi = ProgressIndicatorPercent(total=len(items_ids), msg="Decrementing references %3.0f%%",
+                                          msgid='archive.delete')
             for (i, (items_id, data)) in enumerate(zip(items_ids, self.repository.get_many(items_ids))):
                 if progress:
                     pi.show(i)
@@ -1353,7 +1355,8 @@ class FilesystemObjectProcessors:
                         # Make sure all ids are available
                         for id_ in ids:
                             if not cache.seen_chunk(id_):
-                                status = 'M'  # cache said it is unmodified, but we lost a chunk: process file like modified
+                                # cache said it is unmodified, but we lost a chunk: process file like modified
+                                status = 'M'
                                 break
                         else:
                             chunks = [cache.chunk_incref(id_, self.stats) for id_ in ids]
@@ -1368,7 +1371,8 @@ class FilesystemObjectProcessors:
                         item.chunks = chunks
                     else:
                         with backup_io('read'):
-                            self.process_file_chunks(item, cache, self.stats, self.show_progress, backup_io_iter(self.chunker.chunkify(None, fd)))
+                            self.process_file_chunks(item, cache, self.stats, self.show_progress,
+                                                     backup_io_iter(self.chunker.chunkify(None, fd)))
                         if is_win32:
                             changed_while_backup = False  # TODO
                         else:
@@ -1846,7 +1850,8 @@ class ArchiveChecker:
                             if valid:
                                 yield Item(internal_dict=item)
                             else:
-                                report('Did not get expected metadata dict when unpacking item metadata (%s)' % reason, chunk_id, i)
+                                report('Did not get expected metadata dict when unpacking item metadata (%s)' % reason,
+                                       chunk_id, i)
                     except msgpack.UnpackException:
                         report('Unpacker crashed while unpacking item metadata, trying to resync...', chunk_id, i)
                         unpacker.resync()
@@ -2162,7 +2167,8 @@ class ArchiveRecreater:
             source_chunker_params = (CH_BUZHASH, ) + source_chunker_params
         target.recreate_rechunkify = self.rechunkify and source_chunker_params != target.chunker_params
         if target.recreate_rechunkify:
-            logger.debug('Rechunking archive from %s to %s', source_chunker_params or '(unknown)', target.chunker_params)
+            logger.debug('Rechunking archive from %s to %s', source_chunker_params or '(unknown)',
+                         target.chunker_params)
         target.process_file_chunks = ChunksProcessor(
             cache=self.cache, key=self.key,
             add_item=target.add_item, write_checkpoint=target.write_checkpoint,

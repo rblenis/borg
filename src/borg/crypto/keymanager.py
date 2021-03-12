@@ -106,10 +106,8 @@ class KeyManager:
         lines = (len(binary) + 17) // 18
         repoid = bin_to_hex(self.repository.id)[:18]
         complete_checksum = sha256_truncated(binary, 12)
-        export += 'id: {0:d} / {1} / {2} - {3}\n'.format(lines,
-                                       grouped(repoid),
-                                       grouped(complete_checksum),
-                                       sha256_truncated((str(lines) + '/' + repoid + '/' + complete_checksum).encode('ascii'), 2))
+        export += 'id: {0:d} / {1} / {2} - {3}\n'.format(lines, grouped(repoid), grouped(complete_checksum),
+            sha256_truncated((str(lines) + '/' + repoid + '/' + complete_checksum).encode('ascii'), 2))
         idx = 0
         while len(binary):
             idx += 1

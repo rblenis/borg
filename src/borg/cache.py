@@ -277,7 +277,8 @@ class CacheConfig:
         self.timestamp = self._config.get('cache', 'timestamp', fallback=None)
         self.key_type = self._config.get('cache', 'key_type', fallback=None)
         self.ignored_features = set(parse_stringified_list(self._config.get('cache', 'ignored_features', fallback='')))
-        self.mandatory_features = set(parse_stringified_list(self._config.get('cache', 'mandatory_features', fallback='')))
+        self.mandatory_features = set(parse_stringified_list(self._config.get('cache', 'mandatory_features',
+            fallback='')))
         try:
             self.integrity = dict(self._config.items('integrity'))
             if self._config.get('cache', 'manifest') != self.integrity.pop('manifest'):
@@ -340,7 +341,7 @@ class Cache:
         """Cache is newer than repository - do you have multiple, independently updated repos with same ID?"""
 
     class RepositoryReplay(Error):
-        """Cache, or information obtained from the security directory is newer than repository - this is either an attack or unsafe (multiple repos with same ID)"""
+        """Cache, or information obtained from the security directory is newer than repository - this is either an attack or unsafe (multiple repos with same ID)"""    # noqa: E501
 
     class CacheInitAbortedError(Error):
         """Cache initialization aborted"""
@@ -612,7 +613,8 @@ class LocalCache(CacheStatsMixin):
                         msgpack.pack((path_hash, entry), fd)
                         entry_count += 1
             files_cache_logger.debug("FILES-CACHE-KILL: removed all old entries with age >= TTL [%d]", ttl)
-            files_cache_logger.debug("FILES-CACHE-KILL: removed all current entries with newest cmtime %d", self._newest_cmtime)
+            files_cache_logger.debug("FILES-CACHE-KILL: removed all current entries with newest cmtime %d",
+                                     self._newest_cmtime)
             files_cache_logger.debug("FILES-CACHE-SAVE: finished, %d remaining entries saved.", entry_count)
             self.cache_config.integrity[files_cache_name()] = fd.integrity_data
         pi.output('Saving chunks cache')
@@ -881,8 +883,9 @@ class LocalCache(CacheStatsMixin):
         self.begin_txn()
         with cache_if_remote(self.repository, decrypted_cache=self.key) as decrypted_repository:
             legacy_cleanup()
-            # TEMPORARY HACK: to avoid archive index caching, create a FILE named ~/.cache/borg/REPOID/chunks.archive.d -
-            # this is only recommended if you have a fast, low latency connection to your repo (e.g. if repo is local disk)
+            # TEMPORARY HACK: to avoid archive index caching, create a FILE named ~/.cache/borg/REPOID/chunks.archive.d
+            # - this is only recommended if you have a fast, low latency connection to your repo (e.g. if repo is local
+            # disk)
             self.do_cache = os.path.isdir(archive_path)
             self.chunks = create_master_idx(self.chunks)
 

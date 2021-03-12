@@ -76,7 +76,8 @@ try:
     from .helpers import sig_int
     from .helpers import iter_separated
     from .nanorst import rst_to_terminal
-    from .patterns import ArgparsePatternAction, ArgparseExcludeFileAction, ArgparsePatternFileAction, parse_exclude_pattern
+    from .patterns import ArgparsePatternAction, ArgparseExcludeFileAction, ArgparsePatternFileAction
+    from .patterns import parse_exclude_pattern
     from .patterns import PatternMatcher
     from .item import Item
     from .platform import get_flags, get_process_id, SyncFile
@@ -124,7 +125,7 @@ def with_repository(fake=False, invert_fake=False, create=False, lock=True,
     :param cache: open cache, pass it as keyword argument (implies manifest)
     :param secure: do assert_secure after loading manifest
     :param compatibility: mandatory if not create and (manifest or cache), specifies mandatory feature categories to check
-    """
+    """  # noqa: E501
 
     if not create and (manifest or cache):
         if compatibility is None:
@@ -133,7 +134,8 @@ def with_repository(fake=False, invert_fake=False, create=False, lock=True,
             raise AssertionError("with_repository decorator compatibility argument must be of type tuple")
     else:
         if compatibility is not None:
-            raise AssertionError("with_repository called with compatibility argument but would not check" + repr(compatibility))
+            raise AssertionError("with_repository called with compatibility argument but would not check" +
+                                 repr(compatibility))
         if create:
             compatibility = Manifest.NO_OPERATION_CHECK
 
@@ -188,7 +190,7 @@ def with_archive(method):
     @functools.wraps(method)
     def wrapper(self, args, repository, key, manifest, **kwargs):
         archive = Archive(repository, key, manifest, args.location.archive,
-                          numeric_ids=getattr(args, 'numeric_ids', False),
+                          numeric_owner=getattr(args, 'numeric_owner', False),
                           noflags=getattr(args, 'nobsdflags', False) or getattr(args, 'noflags', False),
                           noacls=getattr(args, 'noacls', False),
                           noxattrs=getattr(args, 'noxattrs', False),
@@ -290,15 +292,16 @@ class Archiver:
                 'If you want to use these older versions, you can disable the check by running:\n'
                 'borg upgrade --disable-tam %s\n'
                 '\n'
-                'See https://borgbackup.readthedocs.io/en/stable/changes.html#pre-1-0-9-manifest-spoofing-vulnerability '
-                'for details about the security implications.', shlex.quote(path))
+                'See https://borgbackup.readthedocs.io/en/stable/changes.html#pre-1-0-9-manifest-spoofing-vulnerability'
+                ' for details about the security implications.', shlex.quote(path))
 
         if key.NAME != 'plaintext':
             if 'repokey' in key.NAME:
                 logger.warning(
                     '\n'
                     'IMPORTANT: you will need both KEY AND PASSPHRASE to access this repo!\n'
-                    'The key is included in the repository config, but should be backed up in case the repository gets corrupted.\n'
+                    'The key is included in the repository config, but should be backed up in case the repository gets '
+                    'corrupted.\n'
                     'Use "borg key export" to export the key, optionally in printable format.\n'
                     'Write down the passphrase. Store both at safe place(s).\n')
             else:
@@ -529,7 +532,8 @@ class Archiver:
                         except (FileNotFoundError, PermissionError) as e:
                             self.print_error('Failed to execute command: %s', e)
                             return self.exit_code
-                        status = fso.process_pipe(path=path, cache=cache, fd=proc.stdout, mode=mode, user=user, group=group)
+                        status = fso.process_pipe(path=path, cache=cache, fd=proc.stdout, mode=mode, user=user,
+                                                  group=group)
                         rc = proc.wait()
                         if rc != 0:
                             self.print_error('Command %r exited with status %d', args.paths[0], rc)
@@ -578,7 +582,8 @@ class Archiver:
                         group = args.stdin_group
                         if not dry_run:
                             try:
-                                status = fso.process_pipe(path=path, cache=cache, fd=sys.stdin.buffer, mode=mode, user=user, group=group)
+                                status = fso.process_pipe(path=path, cache=cache, fd=sys.stdin.buffer, mode=mode,
+                                                          user=user, group=group)
                             except BackupOSError as e:
                                 status = 'E'
                                 self.print_warning('%s: %s', path, e)
@@ -650,13 +655,13 @@ class Archiver:
                        cache_mode=args.files_cache_mode, iec=args.iec) as cache:
                 archive = Archive(repository, key, manifest, args.location.archive, cache=cache,
                                   create=True, checkpoint_interval=args.checkpoint_interval,
-                                  numeric_ids=args.numeric_ids, noatime=not args.atime, noctime=args.noctime,
+                                  numeric_owner=args.numeric_owner, noatime=not args.atime, noctime=args.noctime,
                                   progress=args.progress,
                                   chunker_params=args.chunker_params, start=t0, start_monotonic=t0_monotonic,
                                   log_json=args.log_json, iec=args.iec)
                 metadata_collector = MetadataCollector(noatime=not args.atime, noctime=args.noctime,
                     noflags=args.nobsdflags or args.noflags, noacls=args.noacls, noxattrs=args.noxattrs,
-                    numeric_ids=args.numeric_ids, nobirthtime=args.nobirthtime)
+                    numeric_owner=args.numeric_owner, nobirthtime=args.nobirthtime)
                 cp = ChunksProcessor(cache=cache, key=key,
                     add_item=archive.add_item, write_checkpoint=archive.write_checkpoint,
                     checkpoint_interval=args.checkpoint_interval, rechunkify=False)
@@ -795,8 +800,9 @@ class Archiver:
                                     for tag_name in tag_names:
                                         tag_path = os.path.join(path, tag_name)
                                         self._rec_walk(
-                                                path=tag_path, parent_fd=child_fd, name=tag_name, fso=fso, cache=cache,
-                                                matcher=matcher, exclude_caches=exclude_caches, exclude_if_present=exclude_if_present,
+                                                path=tag_path, parent_fd=child_fd, name=tag_name, fso=fso,
+                                                cache=cache, matcher=matcher, exclude_caches=exclude_caches,
+                                                exclude_if_present=exclude_if_present,
                                                 keep_exclude_tags=keep_exclude_tags, skip_inodes=skip_inodes,
                                                 restrict_dev=restrict_dev, read_special=read_special, dry_run=dry_run)
                                 self.print_file_status('x', path)
@@ -809,10 +815,11 @@ class Archiver:
                         for dirent in entries:
                             normpath = os.path.normpath(os.path.join(path, dirent.name))
                             self._rec_walk(
-                                    path=normpath, parent_fd=child_fd, name=dirent.name, fso=fso, cache=cache, matcher=matcher,
-                                    exclude_caches=exclude_caches, exclude_if_present=exclude_if_present,
-                                    keep_exclude_tags=keep_exclude_tags, skip_inodes=skip_inodes, restrict_dev=restrict_dev,
-                                    read_special=read_special, dry_run=dry_run)
+                                    path=normpath, parent_fd=child_fd, name=dirent.name, fso=fso, cache=cache,
+                                    matcher=matcher, exclude_caches=exclude_caches,
+                                    exclude_if_present=exclude_if_present, keep_exclude_tags=keep_exclude_tags,
+                                    skip_inodes=skip_inodes, restrict_dev=restrict_dev, read_special=read_special,
+                                    dry_run=dry_run)
 
         except (BackupOSError, BackupError) as e:
             self.print_warning('%s: %s', path, e)
@@ -842,9 +849,11 @@ class Archiver:
         """Extract archive contents"""
         # be restrictive when restoring files, restore permissions later
         if sys.getfilesystemencoding() == 'ascii':
-            logger.warning('Warning: File system encoding is "ascii", extracting non-ascii filenames will not be supported.')
+            logger.warning('Warning: File system encoding is "ascii", extracting non-ascii filenames will not be '
+                           'supported.')
             if sys.platform.startswith(('linux', 'freebsd', 'netbsd', 'openbsd', 'darwin', )):
-                logger.warning('Hint: You likely need to fix your locale setup. E.g. install locales and use: LANG=en_US.UTF-8')
+                logger.warning('Hint: You likely need to fix your locale setup. E.g. install locales and use: '
+                               'LANG=en_US.UTF-8')
 
         matcher = self.build_matcher(args.patterns, args.paths)
 
@@ -1119,7 +1128,8 @@ class Archiver:
             elif modebits == stat.S_IFIFO:
                 tarinfo.type = tarfile.FIFOTYPE
             else:
-                self.print_warning('%s: unsupported file type %o for tar export', remove_surrogates(item.path), modebits)
+                self.print_warning('%s: unsupported file type %o for tar export', remove_surrogates(item.path),
+                    modebits)
                 set_ec(EXIT_WARNING)
                 return None, stream
             return tarinfo, stream
@@ -1470,7 +1480,7 @@ class Archiver:
                                        Original size      Compressed size    Deduplicated size
                 This archive:   {stats[original_size]:>20s} {stats[compressed_size]:>20s} {stats[deduplicated_size]:>20s}
                 {cache}
-                """).strip().format(cache=cache, **info))
+                """).strip().format(cache=cache, **info))   # noqa: E501
             if self.exit_code:
                 break
             if not args.json and len(archive_names) - i:
@@ -1669,8 +1679,8 @@ class Archiver:
         recreater = ArchiveRecreater(repository, manifest, key, cache, matcher,
                                      exclude_caches=args.exclude_caches, exclude_if_present=args.exclude_if_present,
                                      keep_exclude_tags=args.keep_exclude_tags, chunker_params=args.chunker_params,
-                                     compression=args.compression, recompress=recompress, always_recompress=always_recompress,
-                                     progress=args.progress, stats=args.stats,
+                                     compression=args.compression, recompress=recompress,
+                                     always_recompress=always_recompress, progress=args.progress, stats=args.stats,
                                      file_status_printer=self.print_file_status,
                                      checkpoint_interval=args.checkpoint_interval,
                                      dry_run=args.dry_run, timestamp=args.timestamp)
@@ -2423,7 +2433,7 @@ class Archiver:
             especially when using the now/utcnow placeholders, since systemd performs its own
             %-based variable replacement even in quoted text. To avoid interference from systemd,
             double all percent signs (``{hostname}-{now:%Y-%m-%d_%H:%M:%S}``
-            becomes ``{hostname}-{now:%%Y-%%m-%%d_%%H:%%M:%%S}``).\n\n''')
+            becomes ``{hostname}-{now:%%Y-%%m-%%d_%%H:%%M:%%S}``).\n\n''')  # noqa: E501
     helptext['compression'] = textwrap.dedent('''
         It is no problem to mix different compression methods in one repo,
         deduplication is done on the source data chunks (not on the compressed
@@ -2623,7 +2633,8 @@ class Archiver:
                     is_append = kwargs['action'] == 'append'
                     if is_append:
                         self.append_options.add(kwargs['dest'])
-                        assert kwargs['default'] == [], 'The default is explicitly constructed as an empty list in resolve()'
+                        assert kwargs['default'] == [], \
+                            'The default is explicitly constructed as an empty list in resolve()'
                     else:
                         self.common_options.setdefault(suffix, set()).add(kwargs['dest'])
                     kwargs['dest'] += suffix
@@ -2809,10 +2820,10 @@ class Archiver:
 
             if sort_by:
                 sort_by_default = 'timestamp'
-                filters_group.add_argument('--sort-by', metavar='KEYS', dest='sort_by',
-                                           type=SortBySpec, default=sort_by_default,
-                                           help='Comma-separated list of sorting keys; valid keys are: {}; default is: {}'
-                                           .format(', '.join(AI_HUMAN_SORT_KEYS), sort_by_default))
+                filters_group.add_argument('--sort-by', metavar='KEYS', dest='sort_by', type=SortBySpec,
+                    default=sort_by_default,
+                    help='Comma-separated list of sorting keys; valid keys are: {}; default is: {}'
+                         .format(', '.join(AI_HUMAN_SORT_KEYS), sort_by_default))
 
             if first_last:
                 group = filters_group.add_mutually_exclusive_group()
@@ -2835,9 +2846,9 @@ class Archiver:
             parser.add_argument('-o', dest='options', type=str,
                                 help='Extra mount options')
             parser.add_argument('--numeric-owner', dest='numeric_ids', action='store_true',
-                                  help='deprecated, use ``--numeric-ids`` instead')
+                                help='deprecated, use ``--numeric-ids`` instead')
             parser.add_argument('--numeric-ids', dest='numeric_ids', action='store_true',
-                                  help='use numeric user and group identifiers from archive(s)')
+                                help='use numeric user and group identifiers from archive(s)')
             define_archive_filters_group(parser)
             parser.add_argument('paths', metavar='PATH', nargs='*', type=str,
                                    help='paths to extract; patterns are supported')
@@ -3367,8 +3378,9 @@ class Archiver:
                                help='set user USER in archive for stdin data (default: %(default)r)')
         subparser.add_argument('--stdin-group', metavar='GROUP', dest='stdin_group', default=gid2group(0),
                                help='set group GROUP in archive for stdin data (default: %(default)r)')
-        subparser.add_argument('--stdin-mode', metavar='M', dest='stdin_mode', type=lambda s: int(s, 8), default=STDIN_MODE_DEFAULT,
-                              help='set mode to M in archive for stdin data (default: %(default)04o)')
+        subparser.add_argument('--stdin-mode', metavar='M', dest='stdin_mode', type=lambda s: int(s, 8),
+                               default=STDIN_MODE_DEFAULT,
+                               help='set mode to M in archive for stdin data (default: %(default)04o)')
         subparser.add_argument('--content-from-command', action='store_true',
                                help='interpret PATH as command and store its stdout. See also section Reading from'
                                     ' stdin below.')
@@ -3378,7 +3390,8 @@ class Archiver:
         subparser.add_argument('--paths-from-command', action='store_true',
                                help='interpret PATH as command and treat its output as ``--paths-from-stdin``')
         subparser.add_argument('--paths-delimiter', metavar='DELIM',
-                               help='set path delimiter for ``--paths-from-stdin`` and ``--paths-from-command`` (default: \\n) ')
+                               help='set path delimiter for ``--paths-from-stdin`` and ``--paths-from-command`` '
+                                    '(default: \\n) ')
 
         exclude_group = define_exclusion_group(subparser, tag_files=True)
         exclude_group.add_argument('--exclude-nodump', dest='exclude_nodump', action='store_true',
@@ -3386,7 +3399,8 @@ class Archiver:
 
         fs_group = subparser.add_argument_group('Filesystem options')
         fs_group.add_argument('-x', '--one-file-system', dest='one_file_system', action='store_true',
-                              help='stay in the same file system and do not store mount points of other file systems.  This might behave different from your expectations, see the docs.')
+                              help='stay in the same file system and do not store mount points of other file systems.  '
+                                   'This might behave different from your expectations, see the docs.')
         fs_group.add_argument('--numeric-owner', dest='numeric_ids', action='store_true',
                               help='deprecated, use ``--numeric-ids`` instead')
         fs_group.add_argument('--numeric-ids', dest='numeric_ids', action='store_true',
@@ -3423,8 +3437,8 @@ class Archiver:
                                    help='add a comment text to the archive')
         archive_group.add_argument('--timestamp', metavar='TIMESTAMP', dest='timestamp',
                                    type=timestamp, default=None,
-                                   help='manually specify the archive creation date/time (UTC, yyyy-mm-ddThh:mm:ss format). '
-                                        'Alternatively, give a reference file/directory.')
+                                   help='manually specify the archive creation date/time (UTC, yyyy-mm-ddThh:mm:ss '
+                                        'format). Alternatively, give a reference file/directory.')
         archive_group.add_argument('-c', '--checkpoint-interval', metavar='SECONDS', dest='checkpoint_interval',
                                    type=int, default=1800,
                                    help='write checkpoint every SECONDS seconds (Default: 1800)')
@@ -3529,7 +3543,8 @@ class Archiver:
                                type=location_validator(archive=False),
                                help='repository to dump')
         subparser.add_argument('--ghost', dest='ghost', action='store_true',
-                               help='dump all segment file contents, including deleted/uncommitted objects and commits.')
+                               help='dump all segment file contents, including deleted/uncommitted objects and '
+                                    'commits.')
 
         debug_search_repo_objs_epilog = process_epilog("""
         This command searches raw (but decrypted and decompressed) repo objects for a specific bytes sequence.
@@ -4361,7 +4376,8 @@ class Archiver:
         subparser.add_argument('--list', dest='output_list', action='store_true',
                                help='output verbose list of items (files, dirs, ...)')
         subparser.add_argument('--filter', metavar='STATUSCHARS', dest='output_filter',
-                               help='only display items with the given status characters (listed in borg create --help)')
+                               help='only display items with the given status characters (listed in borg create '
+                                    '--help)')
         subparser.add_argument('-n', '--dry-run', dest='dry_run', action='store_true',
                                help='do not change anything')
         subparser.add_argument('-s', '--stats', dest='stats', action='store_true',
@@ -4381,8 +4397,8 @@ class Archiver:
                                    help='add a comment text to the archive')
         archive_group.add_argument('--timestamp', metavar='TIMESTAMP', dest='timestamp',
                                    type=timestamp, default=None,
-                                   help='manually specify the archive creation date/time (UTC, yyyy-mm-ddThh:mm:ss format). '
-                                        'alternatively, give a reference file/directory.')
+                                   help='manually specify the archive creation date/time (UTC, yyyy-mm-ddThh:mm:ss '
+                                        'format). Alternatively, give a reference file/directory.')
         archive_group.add_argument('-C', '--compression', metavar='COMPRESSION', dest='compression',
                                    type=CompressionSpec, default=CompressionSpec('lz4'),
                                    help='select compression algorithm, see the output of the '
@@ -4440,17 +4456,18 @@ class Archiver:
                                           help='start repository server process')
         subparser.set_defaults(func=self.do_serve)
         subparser.add_argument('--restrict-to-path', metavar='PATH', dest='restrict_to_paths', action='append',
-                               help='restrict repository access to PATH. '
-                                    'Can be specified multiple times to allow the client access to several directories. '
-                                    'Access to all sub-directories is granted implicitly; PATH doesn\'t need to directly point to a repository.')
-        subparser.add_argument('--restrict-to-repository', metavar='PATH', dest='restrict_to_repositories', action='append',
+                               help='restrict repository access to PATH. Can be specified multiple times to allow the '
+                                    'client access to several directories. Access to all sub-directories is granted '
+                                    'implicitly; PATH doesn\'t need to directly point to a repository.')
+        subparser.add_argument('--restrict-to-repository', metavar='PATH', dest='restrict_to_repositories',
+                                action='append',
                                 help='restrict repository access. Only the repository located at PATH '
-                                     '(no sub-directories are considered) is accessible. '
-                                     'Can be specified multiple times to allow the client access to several repositories. '
-                                     'Unlike ``--restrict-to-path`` sub-directories are not accessible; '
-                                     'PATH needs to directly point at a repository location. '
-                                     'PATH may be an empty directory or the last element of PATH may not exist, in which case '
-                                     'the client may initialize a repository there.')
+                                     '(no sub-directories are considered) is accessible. Can be specified multiple '
+                                     'times to allow the client access to several repositories. Unlike '
+                                     '``--restrict-to-path`` sub-directories are not accessible; PATH needs to '
+                                     'directly point at a repository location. PATH may be an empty directory or '
+                                     'the last element of PATH may not exist, in which case the client may initialize '
+                                     'a repository there.')
         subparser.add_argument('--append-only', dest='append_only', action='store_true',
                                help='only allow appending to repository segment files. Note that this only '
                                     'affects the low level structure of the repository, and running `delete` '

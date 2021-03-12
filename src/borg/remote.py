@@ -111,9 +111,9 @@ class UnexpectedRPCDataFormatFromServer(Error):
 # All method calls on the remote repository object must be allowlisted in RepositoryServer.rpc_methods and have api
 # stubs in RemoteRepository. The @api decorator on these stubs is used to set server version requirements.
 #
-# Method parameters are identified only by name and never by position. Unknown parameters are ignored by the server side.
-# If a new parameter is important and may not be ignored, on the client a parameter specific version requirement needs
-# to be added.
+# Method parameters are identified only by name and never by position. Unknown parameters are ignored by the server
+# side. If a new parameter is important and may not be ignored, on the client a parameter specific version requirement
+# needs to be added.
 # When parameters are removed, they need to be preserved as defaulted parameters on the client stubs so that older
 # servers still get compatible input.
 
@@ -174,7 +174,8 @@ class RepositoryServer:  # pragma: no cover
         # (see RepositoryServer.open below).
         self.append_only = append_only
         self.storage_quota = storage_quota
-        self.client_version = parse_version('1.0.8')  # fallback version if client is too old to send version information
+        # fallback version if client is too old to send version information
+        self.client_version = parse_version('1.0.8')
 
     def positional_to_named(self, method, argv):
         """Translate from positional protocol to named protocol."""
@@ -546,7 +547,8 @@ class RemoteRepository:
         self.ratelimit = SleepingBandwidthLimiter(args.upload_ratelimit * 1024 if args and args.upload_ratelimit else 0)
         self.upload_buffer_size_limit = args.upload_buffer * 1024 * 1024 if args and args.upload_buffer else 0
         self.unpacker = get_limited_unpacker('client')
-        self.server_version = parse_version('1.0.8')  # fallback version if server is too old to send version information
+        # fallback version if server is too old to send version information
+        self.server_version = parse_version('1.0.8')
         self.p = None
         self._args = args
         testing = location.host == '__testsuite__'
@@ -867,7 +869,8 @@ This problem will go away as soon as the server has been upgraded to 1.0.7+.
                     for line in lines:
                         handle_remote_line(line.decode())  # decode late, avoid partial utf-8 sequences
             if w:
-                while (len(self.to_send) <= maximum_to_send) and (calls or self.preload_ids) and len(waiting_for) < MAX_INFLIGHT:
+                while (len(self.to_send) <= maximum_to_send) and (calls or self.preload_ids) and \
+                        (len(waiting_for) < MAX_INFLIGHT):
                     if calls:
                         if is_preloaded:
                             assert cmd == 'get', "is_preload is only supported for 'get'"
@@ -883,7 +886,8 @@ This problem will go away as soon as the server has been upgraded to 1.0.7+.
                                 if self.dictFormat:
                                     self.to_send.push_back(msgpack.packb({MSGID: self.msgid, MSG: cmd, ARGS: args}))
                                 else:
-                                    self.to_send.push_back(msgpack.packb((1, self.msgid, cmd, self.named_to_positional(cmd, args))))
+                                    self.to_send.push_back(msgpack.packb((1, self.msgid, cmd,
+                                        self.named_to_positional(cmd, args))))
                     if not self.to_send and self.preload_ids:
                         chunk_id = self.preload_ids.pop(0)
                         args = {'id': chunk_id}
@@ -892,7 +896,8 @@ This problem will go away as soon as the server has been upgraded to 1.0.7+.
                         if self.dictFormat:
                             self.to_send.push_back(msgpack.packb({MSGID: self.msgid, MSG: 'get', ARGS: args}))
                         else:
-                            self.to_send.push_back(msgpack.packb((1, self.msgid, 'get', self.named_to_positional('get', args))))
+                            self.to_send.push_back(msgpack.packb((1, self.msgid, 'get',
+                                self.named_to_positional('get', args))))
 
                 send_buffer()
         self.ignore_responses |= set(waiting_for)  # we lose order here

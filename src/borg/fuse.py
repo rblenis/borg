@@ -473,8 +473,8 @@ class FuseOperations(llfuse.Operations, FuseBackend):
                      format_file_size(sys.getsizeof(self.parent) + len(self.parent) * sys.getsizeof(self.inode_count)))
         logger.debug('fuse: %d pending archives', len(self.pending_archives))
         logger.debug('fuse: ItemCache %d entries (%d direct, %d indirect), meta-array size %s, direct items size %s',
-                     self.cache.direct_items + self.cache.indirect_items, self.cache.direct_items, self.cache.indirect_items,
-                     format_file_size(sys.getsizeof(self.cache.meta)),
+                     self.cache.direct_items + self.cache.indirect_items, self.cache.direct_items,
+                     self.cache.indirect_items, format_file_size(sys.getsizeof(self.cache.meta)),
                      format_file_size(os.stat(self.cache.fd.fileno()).st_size))
         logger.debug('fuse: data cache: %d/%d entries, %s', len(self.data_cache.items()), self.data_cache._capacity,
                      format_file_size(sum(len(chunk) for key, chunk in self.data_cache.items())))

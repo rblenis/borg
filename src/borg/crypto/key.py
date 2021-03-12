@@ -27,8 +27,8 @@ from ..item import Key, EncryptedKey
 from ..platform import SaveFile
 
 from .nonces import NonceManager
-from .low_level import AES, bytes_to_long, long_to_bytes, bytes_to_int, num_cipher_blocks, hmac_sha256, blake2b_256, hkdf_hmac_sha512
-from .low_level import AES256_CTR_HMAC_SHA256, AES256_CTR_BLAKE2b
+from .low_level import AES, bytes_to_long, long_to_bytes, bytes_to_int, num_cipher_blocks, hmac_sha256, blake2b_256
+from .low_level import AES256_CTR_HMAC_SHA256, AES256_CTR_BLAKE2b, hkdf_hmac_sha512
 
 
 class NoPassphraseFailure(Error):
@@ -490,8 +490,8 @@ class Passphrase(str):
                 print('Your passphrase (UTF-8 encoding in hex): %s' %
                       bin_to_hex(passphrase.encode('utf-8')),
                       file=sys.stderr)
-                print('As you have a non-ASCII passphrase, it is recommended to keep the UTF-8 encoding in hex together with the passphrase at a safe place.',
-                      file=sys.stderr)
+                print('As you have a non-ASCII passphrase, it is recommended to keep the UTF-8 encoding in hex together'
+                      ' with the passphrase at a safe place.', file=sys.stderr)
 
     @classmethod
     def new(cls, allow_empty=False):

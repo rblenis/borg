@@ -235,7 +235,8 @@ class CryptoTestCase(BaseTestCase):
         l = 42
 
         okm = hkdf_hmac_sha512(ikm, salt, info, l)
-        assert okm == bytes.fromhex('832390086cda71fb47625bb5ceb168e4c8e26a1a16ed34d9fc7fe92c1481579338da362cb8d9f925d7cb')
+        assert okm == bytes.fromhex('832390086cda71fb47625bb5ceb168e4c8e26a1a16ed34d9fc7fe92c1481579338da362cb8d'
+                                    '9f925d7cb')
 
     def test_hkdf_hmac_sha512_2(self):
         ikm = bytes.fromhex('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627'
@@ -247,8 +248,9 @@ class CryptoTestCase(BaseTestCase):
         l = 82
 
         okm = hkdf_hmac_sha512(ikm, salt, info, l)
-        assert okm == bytes.fromhex('ce6c97192805b346e6161e821ed165673b84f400a2b514b2fe23d84cd189ddf1b695b48cbd1c838844'
-                                    '1137b3ce28f16aa64ba33ba466b24df6cfcb021ecff235f6a2056ce3af1de44d572097a8505d9e7a93')
+        assert okm == bytes.fromhex('ce6c97192805b346e6161e821ed165673b84f400a2b514b2fe23d84cd189ddf1b695b48cbd1c8388'
+                                    '441137b3ce28f16aa64ba33ba466b24df6cfcb021ecff235f6a2056ce3af1de44d572097a8505d9e'
+                                    '7a93')
 
     def test_hkdf_hmac_sha512_3(self):
         ikm = bytes.fromhex('0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b')
@@ -257,7 +259,8 @@ class CryptoTestCase(BaseTestCase):
         l = 42
 
         okm = hkdf_hmac_sha512(ikm, salt, info, l)
-        assert okm == bytes.fromhex('f5fa02b18298a72a8c23898a8703472c6eb179dc204c03425c970e3b164bf90fff22d04836d0e2343bac')
+        assert okm == bytes.fromhex('f5fa02b18298a72a8c23898a8703472c6eb179dc204c03425c970e3b164bf90fff22d04836d0e2'
+                                    '343bac')
 
     def test_hkdf_hmac_sha512_4(self):
         ikm = bytes.fromhex('0b0b0b0b0b0b0b0b0b0b0b')
@@ -266,7 +269,8 @@ class CryptoTestCase(BaseTestCase):
         l = 42
 
         okm = hkdf_hmac_sha512(ikm, salt, info, l)
-        assert okm == bytes.fromhex('7413e8997e020610fbf6823f2ce14bff01875db1ca55f68cfcf3954dc8aff53559bd5e3028b080f7c068')
+        assert okm == bytes.fromhex('7413e8997e020610fbf6823f2ce14bff01875db1ca55f68cfcf3954dc8aff53559bd5e3028b080'
+                                    'f7c068')
 
     def test_hkdf_hmac_sha512_5(self):
         ikm = bytes.fromhex('0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c')
@@ -275,4 +279,5 @@ class CryptoTestCase(BaseTestCase):
         l = 42
 
         okm = hkdf_hmac_sha512(ikm, salt, info, l)
-        assert okm == bytes.fromhex('1407d46013d98bc6decefcfee55f0f90b0c7f63d68eb1a80eaf07e953cfc0a3a5240a155d6e4daa965bb')
+        assert okm == bytes.fromhex('1407d46013d98bc6decefcfee55f0f90b0c7f63d68eb1a80eaf07e953cfc0a3a5240a155d6e4daa'
+                                    '965bb')

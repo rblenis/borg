@@ -94,12 +94,14 @@ class PlatformLinuxTestCase(BaseTestCase):
     def test_access_acl(self):
         file = tempfile.NamedTemporaryFile()
         self.assert_equal(self.get_acl(file.name), {})
-        self.set_acl(file.name, access=b'user::rw-\ngroup::r--\nmask::rw-\nother::---\nuser:root:rw-:9999\ngroup:root:rw-:9999\n', numeric_ids=False)
+        self.set_acl(file.name, access=b'user::rw-\ngroup::r--\nmask::rw-\nother::---\nuser:root:rw-:9999\n'
+                     b'group:root:rw-:9999\n', numeric_ids=False)
         self.assert_in(b'user:root:rw-:0', self.get_acl(file.name)['acl_access'])
         self.assert_in(b'group:root:rw-:0', self.get_acl(file.name)['acl_access'])
         self.assert_in(b'user:0:rw-:0', self.get_acl(file.name, numeric_ids=True)['acl_access'])
         file2 = tempfile.NamedTemporaryFile()
-        self.set_acl(file2.name, access=b'user::rw-\ngroup::r--\nmask::rw-\nother::---\nuser:root:rw-:9999\ngroup:root:rw-:9999\n', numeric_ids=True)
+        self.set_acl(file2.name, access=b'user::rw-\ngroup::r--\nmask::rw-\nother::---\nuser:root:rw-:9999\n'
+                     b'group:root:rw-:9999\n', numeric_ids=True)
         self.assert_in(b'user:9999:rw-:9999', self.get_acl(file2.name)['acl_access'])
         self.assert_in(b'group:9999:rw-:9999', self.get_acl(file2.name)['acl_access'])
 
@@ -173,12 +175,18 @@ class PlatformDarwinTestCase(BaseTestCase):
         file = tempfile.NamedTemporaryFile()
         file2 = tempfile.NamedTemporaryFile()
         self.assert_equal(self.get_acl(file.name), {})
-        self.set_acl(file.name, b'!#acl 1\ngroup:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:staff:0:allow:read\nuser:FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read\n', numeric_ids=False)
-        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000014:staff:20:allow:read', self.get_acl(file.name)['acl_extended'])
-        self.assert_in(b'user:FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read', self.get_acl(file.name)['acl_extended'])
-        self.set_acl(file2.name, b'!#acl 1\ngroup:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:staff:0:allow:read\nuser:FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read\n', numeric_ids=True)
-        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:wheel:0:allow:read', self.get_acl(file2.name)['acl_extended'])
-        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000::0:allow:read', self.get_acl(file2.name, numeric_ids=True)['acl_extended'])
+        self.set_acl(file.name, b'!#acl 1\ngroup:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:staff:0:allow:read\nuser:'
+            b'FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read\n', numeric_ids=False)
+        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000014:staff:20:allow:read',
+            self.get_acl(file.name)['acl_extended'])
+        self.assert_in(b'user:FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read',
+            self.get_acl(file.name)['acl_extended'])
+        self.set_acl(file2.name, b'!#acl 1\ngroup:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:staff:0:allow:read\nuser:'
+            b'FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read\n', numeric_ids=True)
+        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:wheel:0:allow:read',
+            self.get_acl(file2.name)['acl_extended'])
+        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000::0:allow:read',
+            self.get_acl(file2.name, numeric_ids=True)['acl_extended'])
 
 
 @unittest.skipUnless(sys.platform.startswith(('linux', 'freebsd', 'darwin')), 'POSIX only tests')

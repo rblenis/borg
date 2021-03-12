@@ -355,8 +355,8 @@ class Location:
     scp_re = re.compile(r"""
         (
             """ + optional_user_re + r"""                   # user@  (optional)
-            (?P<host>([^:/]+|\[[0-9a-fA-F:.]+\])):          # host: (don't match / or [ipv6] in host to disambiguate from file:)
-        )?                                                  # user@host: part is optional
+            (?P<host>([^:/]+|\[[0-9a-fA-F:.]+\])):          # host: (don't match / or [ipv6] in host to disambiguate
+        )?                                                  # from file:); user@host: part is optional
         """ + scp_path_re + optional_archive_re, re.VERBOSE)  # path with optional archive
 
     # get the repo from BORG_REPO env and the optional archive from param.
@@ -372,8 +372,8 @@ class Location:
         (?:file://)?                                        # optional file protocol
         (?P<path>
             (?:[a-zA-Z]:)?                                  # Drive letter followed by a colon (optional)
-            (?:[^:]+)                                       # Anything which does not contain a :, at least one character
-        )
+            (?:[^:]+)                                       # Anything which does not contain a :, at least one
+        )                                                   # character
         """ + optional_archive_re, re.VERBOSE)              # archive name (optional, may be empty)
 
     def __init__(self, text='', overrides={}):

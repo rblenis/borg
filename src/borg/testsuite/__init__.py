@@ -227,7 +227,8 @@ class BaseTestCase(unittest.TestCase):
                 d2.append(no_selinux(get_all(path2, follow_symlinks=False)))
             self.assert_equal(d1, d2)
         for sub_diff in diff.subdirs.values():
-            self._assert_dirs_equal_cmp(sub_diff, ignore_flags=ignore_flags, ignore_xattrs=ignore_xattrs, ignore_ns=ignore_ns)
+            self._assert_dirs_equal_cmp(sub_diff, ignore_flags=ignore_flags, ignore_xattrs=ignore_xattrs,
+                                        ignore_ns=ignore_ns)
 
     @contextmanager
     def fuse_mount(self, location, mountpoint=None, *options, fork=True, os_fork=False, **kwargs):

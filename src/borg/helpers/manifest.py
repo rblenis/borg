@@ -74,7 +74,8 @@ class Archives(abc.MutableMapping):
         name = safe_encode(name)
         del self._archives[name]
 
-    def list(self, *, glob=None, match_end=r'\Z', sort_by=(), consider_checkpoints=True, first=None, last=None, reverse=False):
+    def list(self, *, glob=None, match_end=r'\Z', sort_by=(), consider_checkpoints=True, first=None, last=None,
+             reverse=False):
         """
         Return list of ArchiveInfo instances according to the parameters.
 
@@ -108,10 +109,12 @@ class Archives(abc.MutableMapping):
         get a list of archives, considering --first/last/prefix/glob-archives/sort/consider-checkpoints cmdline args
         """
         if args.location.archive:
-            raise Error('The options --first, --last, --prefix, and --glob-archives, and --consider-checkpoints can only be used on repository targets.')
+            raise Error('The options --first, --last, --prefix, and --glob-archives, and --consider-checkpoints can '
+                        'only be used on repository targets.')
         if args.prefix is not None:
             args.glob_archives = args.prefix + '*'
-        return self.list(sort_by=args.sort_by.split(','), consider_checkpoints=args.consider_checkpoints, glob=args.glob_archives, first=args.first, last=args.last)
+        return self.list(sort_by=args.sort_by.split(','), consider_checkpoints=args.consider_checkpoints,
+                         glob=args.glob_archives, first=args.first, last=args.last)
 
     def set_raw_dict(self, d):
         """set the dict we get from the msgpack unpacker"""
@@ -187,7 +190,8 @@ class Manifest:
             key = key_factory(repository, cdata)
         manifest = cls(key, repository)
         data = key.decrypt(None, cdata)
-        manifest_dict, manifest.tam_verified = key.unpack_and_verify_manifest(data, force_tam_not_required=force_tam_not_required)
+        manifest_dict, manifest.tam_verified = key.unpack_and_verify_manifest(data,
+            force_tam_not_required=force_tam_not_required)
         m = ManifestItem(internal_dict=manifest_dict)
         manifest.id = key.id_hash(data)
         if m.get('version') not in (1, 2):
