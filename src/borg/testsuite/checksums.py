@@ -24,7 +24,7 @@ def test_crc32(implementation):
                        63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73,
                        127, 128, 129, 130, 131, 132, 133, 134, 135,
                        255, 256, 257, ]:
-            d = mv[start:start+length]
+            d = mv[start:start + length]
             assert zlib.crc32(d, initial_crc) == implementation(d, initial_crc)
 
 
