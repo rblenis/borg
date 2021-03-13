@@ -11,11 +11,11 @@ from packaging.version import parse as parse_version
 
 from .helpers import prepare_subprocess_env
 
+from .platform import listxattr, getxattr, setxattr, ENOATTR
+
 from .logger import create_logger
 
 logger = create_logger()
-
-from .platform import listxattr, getxattr, setxattr, ENOATTR
 
 # If we are running with fakeroot on Linux, then use the xattr functions of fakeroot. This is needed by
 # the 'test_extract_capabilities' test, but also allows xattrs to work with fakeroot on Linux in normal use.
