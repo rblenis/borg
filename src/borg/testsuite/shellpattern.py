@@ -70,7 +70,7 @@ def check(path, pattern):
     ("foo3", ["foo[!12]"]),
     ("foo^", ["foo[^!]"]),
     ("foo!", ["foo[^!]"]),
-    ])
+])
 def test_match(path, patterns):
     for p in patterns:
         assert check(path, p)
@@ -107,7 +107,7 @@ def test_match(path, patterns):
     # Inverted set
     ("foo1", ["foo[!12]"]),
     ("foo2", ["foo[!12]"]),
-    ])
+])
 def test_mismatch(path, patterns):
     for p in patterns:
         assert not check(path, p)
