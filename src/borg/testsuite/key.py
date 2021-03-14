@@ -12,7 +12,6 @@ from ..crypto.key import PlaintextKey, PassphraseKey, AuthenticatedKey, RepoKey,
 from ..crypto.key import ID_HMAC_SHA_256, ID_BLAKE2b_256
 from ..crypto.key import TAMRequiredError, TAMInvalid, TAMUnsupportedSuiteError, UnsupportedManifestError
 from ..crypto.key import identify_key
-from ..crypto.low_level import bytes_to_long
 from ..crypto.low_level import IntegrityError as IntegrityErrorBase
 from ..helpers import IntegrityError
 from ..helpers import Location
