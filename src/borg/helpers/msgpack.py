@@ -1,5 +1,5 @@
 from .datastruct import StableDict
-from ..constants import *  # NOQA
+from ..constants import BUFSIZE, MAX_OBJECT_SIZE, LIST_SCAN_LIMIT, MAX_ARCHIVES
 
 # wrapping msgpack ---------------------------------------------------------------------------------------------------
 #
@@ -182,8 +182,8 @@ def is_slow_msgpack():
 def is_supported_msgpack():
     # DO NOT CHANGE OR REMOVE! See also requirements and comments in setup.py.
     import msgpack
-    return (0, 5, 6) <= msgpack.version <= (1, 0, 2) and \
-           msgpack.version not in [(1, 0, 1), ]  # < add bad releases here to deny list
+    bad_msgpack_versions = [(1, 0, 1), ]   # < add bad releases here to deny list
+    return (0, 5, 6) <= msgpack.version <= (1, 0, 2) and msgpack.version not in bad_msgpack_versions
 
 
 def get_limited_unpacker(kind):
