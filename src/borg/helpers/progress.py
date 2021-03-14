@@ -4,9 +4,6 @@ import sys
 import time
 from shutil import get_terminal_size
 
-from ..logger import create_logger
-logger = create_logger()
-
 from .parseformat import ellipsis_truncate
 
 
