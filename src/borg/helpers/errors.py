@@ -1,4 +1,4 @@
-from ..constants import *  # NOQA
+from ..constants import EXIT_ERROR
 
 import borg.crypto.low_level
 
