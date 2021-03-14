@@ -29,7 +29,7 @@ def check_patterns(files, pattern, expected):
     ("/home/user", ["home/user"]),
     ("/home/user2", ["home/user2"]),
     ("/home/user/.bashrc", ["home/user/.bashrc"]),
-    ])
+])
 def test_patterns_full(pattern, expected):
     files = ["home", "home/user", "home/user2", "home/user/.bashrc", ]
 
@@ -42,7 +42,7 @@ def test_patterns_full(pattern, expected):
     ("relative", []),
     ("relative/path/", ["relative/path"]),
     ("relative/path", ["relative/path"]),
-    ])
+])
 def test_patterns_full_relative(pattern, expected):
     files = ["relative/path", "relative/path2", ]
 
@@ -60,7 +60,7 @@ def test_patterns_full_relative(pattern, expected):
     ("///etc//////", ["etc/server/config", "etc/server/hosts"]),
     ("/./home//..//home/user2", ["home/user2/.profile", "home/user2/public_html/index.html"]),
     ("/srv", ["srv/messages", "srv/dmesg"]),
-    ])
+])
 def test_patterns_prefix(pattern, expected):
     files = [
         "etc/server/config", "etc/server/hosts", "home", "home/user/.profile", "home/user/.bashrc",
@@ -76,7 +76,7 @@ def test_patterns_prefix(pattern, expected):
     ("foo", []),
     ("relative", ["relative/path1", "relative/two"]),
     ("more", ["more/relative"]),
-    ])
+])
 def test_patterns_prefix_relative(pattern, expected):
     files = ["relative/path1", "relative/two", "more/relative"]
 
@@ -107,7 +107,7 @@ def test_patterns_prefix_relative(pattern, expected):
     ("/./home//..//home/user2/*", ["home/user2/.profile", "home/user2/public_html/index.html"]),
     ("/srv*", ["srv/messages", "srv/dmesg"]),
     ("/home/*/.thumbnails", ["home/foo/.thumbnails", "home/foo/bar/.thumbnails"]),
-    ])
+])
 def test_patterns_fnmatch(pattern, expected):
     files = [
         "etc/server/config", "etc/server/hosts", "home", "home/user/.profile", "home/user/.bashrc",
@@ -152,7 +152,7 @@ def test_patterns_fnmatch(pattern, expected):
     ("/srv2/**/", ["srv2/blafasel"]),
     ("/home/*/.thumbnails", ["home/foo/.thumbnails"]),
     ("/home/*/*/.thumbnails", ["home/foo/bar/.thumbnails"]),
-    ])
+])
 def test_patterns_shell(pattern, expected):
     files = [
         "etc/server/config", "etc/server/hosts", "home", "home/user/.profile", "home/user/.bashrc",
@@ -173,7 +173,7 @@ def test_patterns_shell(pattern, expected):
     ("^(?!/srv|/foo|/opt)",
      ["/home", "/home/user/.profile", "/home/user/.bashrc", "/home/user2/.profile",
       "/home/user2/public_html/index.html", "/home/foo/.thumbnails", "/home/foo/bar/.thumbnails", ]),
-    ])
+])
 def test_patterns_regex(pattern, expected):
     files = [
         '/srv/data', '/foo/bar', '/home',
@@ -264,7 +264,7 @@ def test_invalid_unicode_pattern(pattern):
     # the order of exclude patterns shouldn't matter
     (["/more/*", "/nomatch"],
      ['data/something00.txt', 'home', ' #/wsfoobar', '\tstart/whitespace', 'whitespace/end\t']),
-    ])
+])
 def test_exclude_patterns_from_file(tmpdir, lines, expected):
     files = [
         'data/something00.txt', 'more/data', 'home',
@@ -442,7 +442,7 @@ def test_inclexcl_patterns_from_file(tmpdir, lines, expected):
     ("sh:*", ShellPattern),
     ("sh:/data/*", ShellPattern),
     ("sh:sh:/data/*", ShellPattern),
-    ])
+])
 def test_parse_pattern(pattern, cls):
     assert isinstance(parse_pattern(pattern), cls)
 
