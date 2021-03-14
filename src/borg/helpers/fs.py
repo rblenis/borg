@@ -12,7 +12,7 @@ from .errors import Error
 from .process import prepare_subprocess_env
 from ..platformflags import is_win32
 
-from ..constants import *  # NOQA
+from ..constants import CACHE_TAG_CONTENTS, CACHE_TAG_NAME
 
 from ..logger import create_logger
 logger = create_logger()
