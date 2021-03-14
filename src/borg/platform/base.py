@@ -5,6 +5,7 @@ import uuid
 
 from borg.helpers import truncate_and_unlink
 from borg.platformflags import is_win32
+from .xattr import ENOATTR
 
 """
 platform base module
@@ -21,8 +22,6 @@ are correctly composed into the base functionality.
 API_VERSION = '1.2_05'
 
 fdatasync = getattr(os, 'fdatasync', os.fsync)
-
-from .xattr import ENOATTR
 
 
 def listxattr(path, *, follow_symlinks=False):
