@@ -78,7 +78,8 @@ class NonceManager:
 
         repo_free_nonce = self.get_repo_free_nonce()
         local_free_nonce = self.get_local_free_nonce()
-        free_nonce_space = max(x for x in (repo_free_nonce, local_free_nonce, self.manifest_nonce, self.end_of_nonce_reservation) if x is not None)
+        free_nonce_space = max(x for x in (repo_free_nonce, local_free_nonce,
+                                           self.manifest_nonce, self.end_of_nonce_reservation) if x is not None)
         reservation_end = free_nonce_space + nonce_space_needed + NONCE_SPACE_RESERVATION
         assert reservation_end < MAX_REPRESENTABLE_NONCE
         self.commit_repo_nonce_reservation(reservation_end, repo_free_nonce)
