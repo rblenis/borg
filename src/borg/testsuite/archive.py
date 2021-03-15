@@ -46,7 +46,7 @@ def tests_stats_progress(stats, monkeypatch, columns=80):
     buf = ' ' * (columns - len(s))
     assert out.getvalue() == s + buf + "\r"
     out = StringIO()
-    stats.show_progress(item=Item(path='foo'*40), final=False, stream=out)
+    stats.show_progress(item=Item(path='foo' * 40), final=False, stream=out)
     s = '1.02 kB O 10 B C 10 B D 0 N foofoofoofoofoofoofoofo...oofoofoofoofoofoofoofoofoo'
     buf = ' ' * (columns - len(s))
     assert out.getvalue() == s + buf + "\r"
@@ -197,11 +197,10 @@ def item_keys_serialized():
     return [msgpack.packb(name) for name in ITEM_KEYS]
 
 
-@pytest.mark.parametrize('packed',
-    [b'', b'x', b'foobar', ] +
-    [msgpack.packb(o) for o in (
-        [None, 0, 0.0, False, '', {}, [], ()] +
-        [42, 23.42, True, b'foobar', {b'foo': b'bar'}, [b'foo', b'bar'], (b'foo', b'bar')]
+@pytest.mark.parametrize(
+    'packed', [b'', b'x', b'foobar', ] + [msgpack.packb(o) for o in (
+        [None, 0, 0.0, False, '', {}, [], (), 42, 23.42, True, b'foobar',
+         {b'foo': b'bar'}, [b'foo', b'bar'], (b'foo', b'bar')]
     )])
 def test_invalid_msgpacked_item(packed, item_keys_serialized):
     assert not valid_msgpacked_dict(packed, item_keys_serialized)
@@ -211,8 +210,8 @@ def test_invalid_msgpacked_item(packed, item_keys_serialized):
 IK = sorted(list(ITEM_KEYS))
 
 
-@pytest.mark.parametrize('packed',
-    [msgpack.packb(o) for o in [
+@pytest.mark.parametrize(
+    'packed', [msgpack.packb(o) for o in [
         {b'path': b'/a/b/c'},  # small (different msgpack mapping type!)
         OrderedDict((k, b'') for k in IK),  # as big (key count) as it gets
         OrderedDict((k, b'x' * 1000) for k in IK),  # as big (key count and volume) as it gets
