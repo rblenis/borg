@@ -10,7 +10,7 @@ import os
 
 import pytest
 
-from .archiver import changedir, cmd
+from .archiver import changedir
 from ..constants import zeros
 
 
