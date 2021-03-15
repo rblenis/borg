@@ -11,11 +11,12 @@ import traceback
 
 from .. import __version__
 
-from ..platformflags import is_win32, is_linux, is_freebsd, is_darwin
+from ..platformflags import is_win32
 from ..logger import create_logger
 logger = create_logger()
 
-from ..constants import EXIT_SUCCESS, EXIT_WARNING, EXIT_SIGNAL_BASE
+# do these need to be after creating logger?
+from ..constants import EXIT_SUCCESS, EXIT_WARNING, EXIT_SIGNAL_BASE    # noqa:E402
 
 
 @contextlib.contextmanager
