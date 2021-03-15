@@ -12,25 +12,24 @@ import sys
 import sysconfig
 import tempfile
 import time
-import uuid
 import unittest
 
 from ..xattr import get_all
 from ..platform import get_flags
 from ..helpers import umount
-from ..helpers import EXIT_SUCCESS, EXIT_WARNING, EXIT_ERROR
+from ..helpers import EXIT_SUCCESS, EXIT_ERROR
 from .. import platform
 
 # Note: this is used by borg.selftest, do not use or import py.test functionality here.
 
-from ..fuse_impl import llfuse, has_pyfuse3, has_llfuse
+from ..fuse_impl import llfuse, has_pyfuse3, has_llfuse     # noqa: F401
 
 # Does this version of llfuse support ns precision?
 have_fuse_mtime_ns = hasattr(llfuse.EntryAttributes, 'st_mtime_ns') if llfuse else False
 
 try:
     from pytest import raises
-except:  # noqa
+except:  # noqa: E722
     raises = None
 
 has_lchflags = hasattr(os, 'lchflags') or sys.platform.startswith('linux')
@@ -227,7 +226,8 @@ class BaseTestCase(unittest.TestCase):
                 d2.append(no_selinux(get_all(path2, follow_symlinks=False)))
             self.assert_equal(d1, d2)
         for sub_diff in diff.subdirs.values():
-            self._assert_dirs_equal_cmp(sub_diff, ignore_flags=ignore_flags, ignore_xattrs=ignore_xattrs, ignore_ns=ignore_ns)
+            self._assert_dirs_equal_cmp(sub_diff, ignore_flags=ignore_flags, ignore_xattrs=ignore_xattrs,
+                                        ignore_ns=ignore_ns)
 
     @contextmanager
     def fuse_mount(self, location, mountpoint=None, *options, fork=True, os_fork=False, **kwargs):
