@@ -4,7 +4,6 @@ import json
 import os
 import os.path
 import re
-import socket
 import stat
 import uuid
 from binascii import hexlify
@@ -18,10 +17,11 @@ logger = create_logger()
 
 from .errors import Error
 from .fs import get_keys_dir
-from .time import OutputTimestamp, format_time, to_localtime, safe_timestamp, safe_s
+from .time import OutputTimestamp, format_time, to_localtime, safe_timestamp
 from .. import __version__ as borg_version
 from .. import __version_tuple__ as borg_version_tuple
-from ..constants import *  # NOQA
+from ..constants import CH_FIXED, MAX_DATA_SIZE, CHUNKER_PARAMS, CH_BUZHASH, ISO_FORMAT_NO_USECS
+from ..constants import DEFAULT_FILES_CACHE_MODE, DEFAULT_FILES_CACHE_MODE_UI
 from ..platformflags import is_win32
 
 
@@ -292,8 +292,8 @@ def format_archive(archive):
 
 
 def parse_stringified_list(s):
-    l = re.split(" *, *", s)
-    return [item for item in l if item != '']
+    items = re.split(" *, *", s)
+    return [item for item in items if item != '']
 
 
 class Location:
@@ -315,20 +315,20 @@ class Location:
     # path must not contain :: (it ends at :: or string end), but may contain single colons.
     # to avoid ambiguities with other regexes, it must also not start with ":" nor with "//" nor with "ssh://".
     scp_path_re = r"""
-        (?!(:|//|ssh://))                                   # not starting with ":" or // or ssh://
-        (?P<path>([^:]|(:(?!:)))+)                          # any chars, but no "::"
+        (?!(:|//|ssh://))                           # not starting with ":" or // or ssh://
+        (?P<path>([^:]|(:(?!:)))+)                  # any chars, but no "::"
         """
 
     # file_path must not contain :: (it ends at :: or string end), but may contain single colons.
     # it must start with a / and that slash is part of the path.
     file_path_re = r"""
-        (?P<path>(([^/]*)/([^:]|(:(?!:)))+))                # start opt. servername, then /, then any chars, but no "::"
+        (?P<path>(([^/]*)/([^:]|(:(?!:)))+))        # start opt. servername, then /, then any chars, but no "::"
         """
 
     # abs_path must not contain :: (it ends at :: or string end), but may contain single colons.
     # it must start with a / and that slash is part of the path.
     abs_path_re = r"""
-        (?P<path>(/([^:]|(:(?!:)))+))                       # start with /, then any chars, but no "::"
+        (?P<path>(/([^:]|(:(?!:)))+))               # start with /, then any chars, but no "::"
         """
 
     # optional ::archive_name at the end, archive name must not contain "/".
@@ -336,45 +336,45 @@ class Location:
     # the archive names and of course "/" is not valid in a directory name.
     optional_archive_re = r"""
         (?:
-            ::                                              # "::" as separator
-            (?P<archive>[^/]+)                              # archive name must not contain "/"
-        )?$"""                                              # must match until the end
+            ::                                      # "::" as separator
+            (?P<archive>[^/]+)                      # archive name must not contain "/"
+        )?$"""                                      # must match until the end
 
     # regexes for misc. kinds of supported location specifiers:
     ssh_re = re.compile(r"""
-        (?P<proto>ssh)://                                   # ssh://
-        """ + optional_user_re + r"""                       # user@  (optional)
+        (?P<proto>ssh)://                           # ssh://
+        """ + optional_user_re + r"""               # user@  (optional)
         (?P<host>([^:/]+|\[[0-9a-fA-F:.]+\]))(?::(?P<port>\d+))?  # host or host:port or [ipv6] or [ipv6]:port
         """ + abs_path_re + optional_archive_re, re.VERBOSE)  # path or path::archive
 
     file_re = re.compile(r"""
-        (?P<proto>file)://                                  # file://
+        (?P<proto>file)://                          # file://
         """ + file_path_re + optional_archive_re, re.VERBOSE)  # servername/path, path or path::archive
 
     # note: scp_re is also use for local paths
     scp_re = re.compile(r"""
         (
-            """ + optional_user_re + r"""                   # user@  (optional)
-            (?P<host>([^:/]+|\[[0-9a-fA-F:.]+\])):          # host: (don't match / or [ipv6] in host to disambiguate from file:)
-        )?                                                  # user@host: part is optional
+            """ + optional_user_re + r"""           # user@  (optional)
+            (?P<host>([^:/]+|\[[0-9a-fA-F:.]+\])):  # host: (don't match / or [ipv6] in host to disambiguate from file:)
+        )?                                          # user@host: part is optional
         """ + scp_path_re + optional_archive_re, re.VERBOSE)  # path with optional archive
 
     # get the repo from BORG_REPO env and the optional archive from param.
     # if the syntax requires giving REPOSITORY (see "borg mount"),
     # use "::" to let it use the env var.
     # if REPOSITORY argument is optional, it'll automatically use the env.
-    env_re = re.compile(r"""                                # the repo part is fetched from BORG_REPO
-        (?:::$)                                             # just "::" is ok (when a pos. arg is required, no archive)
-        |                                                   # or
-        """ + optional_archive_re, re.VERBOSE)              # archive name (optional, may be empty)
+    env_re = re.compile(r"""                        # the repo part is fetched from BORG_REPO
+        (?:::$)                                     # just "::" is ok (when a pos. arg is required, no archive)
+        |                                           # or
+        """ + optional_archive_re, re.VERBOSE)      # archive name (optional, may be empty)
 
     win_file_re = re.compile(r"""
-        (?:file://)?                                        # optional file protocol
+        (?:file://)?                                # optional file protocol
         (?P<path>
-            (?:[a-zA-Z]:)?                                  # Drive letter followed by a colon (optional)
-            (?:[^:]+)                                       # Anything which does not contain a :, at least one character
+            (?:[a-zA-Z]:)?                          # Drive letter followed by a colon (optional)
+            (?:[^:]+)                               # Anything which does not contain a :, at least one character
         )
-        """ + optional_archive_re, re.VERBOSE)              # archive name (optional, may be empty)
+        """ + optional_archive_re, re.VERBOSE)      # archive name (optional, may be empty)
 
     def __init__(self, text='', overrides={}):
         if not self.parse(text, overrides):
