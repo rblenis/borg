@@ -1,16 +1,15 @@
 import functools
 import os
-import random
 import shutil
 import sys
 import tempfile
 import unittest
 
-from ..platformflags import is_win32, is_linux, is_freebsd, is_darwin
+from ..platformflags import is_win32
 from ..platform import acl_get, acl_set, swidth
 from ..platform import get_process_id, process_alive
 from . import BaseTestCase, unopened_tempfile
-from .locking import free_pid
+from .locking import free_pid   # noqa: F401   - this is a test fixture
 
 
 ACCESS_ACL = """
@@ -81,25 +80,27 @@ class PlatformLinuxTestCase(BaseTestCase):
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
 
-    def get_acl(self, path, numeric_ids=False):
+    def get_acl(self, path, numeric_owner=False):
         item = {}
-        acl_get(path, item, os.stat(path), numeric_ids=numeric_ids)
+        acl_get(path, item, os.stat(path), numeric_owner=numeric_owner)
         return item
 
-    def set_acl(self, path, access=None, default=None, numeric_ids=False):
+    def set_acl(self, path, access=None, default=None, numeric_owner=False):
         item = {'acl_access': access, 'acl_default': default}
-        acl_set(path, item, numeric_ids=numeric_ids)
+        acl_set(path, item, numeric_owner=numeric_owner)
 
     @unittest.skipIf(not are_acls_working(), 'ACLs do not work')
     def test_access_acl(self):
         file = tempfile.NamedTemporaryFile()
         self.assert_equal(self.get_acl(file.name), {})
-        self.set_acl(file.name, access=b'user::rw-\ngroup::r--\nmask::rw-\nother::---\nuser:root:rw-:9999\ngroup:root:rw-:9999\n', numeric_ids=False)
+        self.set_acl(file.name, access=b'user::rw-\ngroup::r--\nmask::rw-\nother::---\n'
+                     b'user:root:rw-:9999\ngroup:root:rw-:9999\n', numeric_owner=False)
         self.assert_in(b'user:root:rw-:0', self.get_acl(file.name)['acl_access'])
         self.assert_in(b'group:root:rw-:0', self.get_acl(file.name)['acl_access'])
-        self.assert_in(b'user:0:rw-:0', self.get_acl(file.name, numeric_ids=True)['acl_access'])
+        self.assert_in(b'user:0:rw-:0', self.get_acl(file.name, numeric_owner=True)['acl_access'])
         file2 = tempfile.NamedTemporaryFile()
-        self.set_acl(file2.name, access=b'user::rw-\ngroup::r--\nmask::rw-\nother::---\nuser:root:rw-:9999\ngroup:root:rw-:9999\n', numeric_ids=True)
+        self.set_acl(file2.name, access=b'user::rw-\ngroup::r--\nmask::rw-\nother::---\n'
+                     b'user:root:rw-:9999\ngroup:root:rw-:9999\n', numeric_owner=True)
         self.assert_in(b'user:9999:rw-:9999', self.get_acl(file2.name)['acl_access'])
         self.assert_in(b'group:9999:rw-:9999', self.get_acl(file2.name)['acl_access'])
 
@@ -125,19 +126,19 @@ class PlatformLinuxTestCase(BaseTestCase):
         group_entry = 'group:übel:rw-:666'.encode('utf-8')
         group_entry_numeric = 'group:666:rw-:666'.encode('ascii')
         acl = b'\n'.join([nothing_special, user_entry, group_entry])
-        self.set_acl(file.name, access=acl, numeric_ids=False)
-        acl_access = self.get_acl(file.name, numeric_ids=False)['acl_access']
+        self.set_acl(file.name, access=acl, numeric_owner=False)
+        acl_access = self.get_acl(file.name, numeric_owner=False)['acl_access']
         self.assert_in(user_entry, acl_access)
         self.assert_in(group_entry, acl_access)
-        acl_access_numeric = self.get_acl(file.name, numeric_ids=True)['acl_access']
+        acl_access_numeric = self.get_acl(file.name, numeric_owner=True)['acl_access']
         self.assert_in(user_entry_numeric, acl_access_numeric)
         self.assert_in(group_entry_numeric, acl_access_numeric)
         file2 = tempfile.NamedTemporaryFile()
-        self.set_acl(file2.name, access=acl, numeric_ids=True)
-        acl_access = self.get_acl(file2.name, numeric_ids=False)['acl_access']
+        self.set_acl(file2.name, access=acl, numeric_owner=True)
+        acl_access = self.get_acl(file2.name, numeric_owner=False)['acl_access']
         self.assert_in(user_entry, acl_access)
         self.assert_in(group_entry, acl_access)
-        acl_access_numeric = self.get_acl(file.name, numeric_ids=True)['acl_access']
+        acl_access_numeric = self.get_acl(file.name, numeric_owner=True)['acl_access']
         self.assert_in(user_entry_numeric, acl_access_numeric)
         self.assert_in(group_entry_numeric, acl_access_numeric)
 
@@ -159,26 +160,32 @@ class PlatformDarwinTestCase(BaseTestCase):
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
 
-    def get_acl(self, path, numeric_ids=False):
+    def get_acl(self, path, numeric_owner=False):
         item = {}
-        acl_get(path, item, os.stat(path), numeric_ids=numeric_ids)
+        acl_get(path, item, os.stat(path), numeric_owner=numeric_owner)
         return item
 
-    def set_acl(self, path, acl, numeric_ids=False):
+    def set_acl(self, path, acl, numeric_owner=False):
         item = {'acl_extended': acl}
-        acl_set(path, item, numeric_ids=numeric_ids)
+        acl_set(path, item, numeric_owner=numeric_owner)
 
     @unittest.skipIf(not are_acls_working(), 'ACLs do not work')
     def test_access_acl(self):
         file = tempfile.NamedTemporaryFile()
         file2 = tempfile.NamedTemporaryFile()
         self.assert_equal(self.get_acl(file.name), {})
-        self.set_acl(file.name, b'!#acl 1\ngroup:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:staff:0:allow:read\nuser:FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read\n', numeric_ids=False)
-        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000014:staff:20:allow:read', self.get_acl(file.name)['acl_extended'])
-        self.assert_in(b'user:FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read', self.get_acl(file.name)['acl_extended'])
-        self.set_acl(file2.name, b'!#acl 1\ngroup:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:staff:0:allow:read\nuser:FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read\n', numeric_ids=True)
-        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:wheel:0:allow:read', self.get_acl(file2.name)['acl_extended'])
-        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000::0:allow:read', self.get_acl(file2.name, numeric_ids=True)['acl_extended'])
+        self.set_acl(file.name, b'!#acl 1\ngroup:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:staff:0:allow:read\n'
+                     b'user:FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read\n', numeric_owner=False)
+        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000014:staff:20:allow:read',
+                       self.get_acl(file.name)['acl_extended'])
+        self.assert_in(b'user:FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read',
+                       self.get_acl(file.name)['acl_extended'])
+        self.set_acl(file2.name, b'!#acl 1\ngroup:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:staff:0:allow:read\n'
+                     b'user:FFFFEEEE-DDDD-CCCC-BBBB-AAAA00000000:root:0:allow:read\n', numeric_owner=True)
+        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000:wheel:0:allow:read',
+                       self.get_acl(file2.name)['acl_extended'])
+        self.assert_in(b'group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000000::0:allow:read',
+                       self.get_acl(file2.name, numeric_owner=True)['acl_extended'])
 
 
 @unittest.skipUnless(sys.platform.startswith(('linux', 'freebsd', 'darwin')), 'POSIX only tests')
@@ -194,7 +201,7 @@ class PlatformPosixTestCase(BaseTestCase):
         self.assert_equal(swidth("borgバックアップ"), 4 + 6 * 2)
 
 
-def test_process_alive(free_pid):
+def test_process_alive(free_pid):   # noqa: F811 - free_pid is a test fixture - it is not being redifined.
     id = get_process_id()
     assert process_alive(*id)
     host, pid, tid = id
