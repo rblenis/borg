@@ -7,7 +7,7 @@ from hashlib import sha256
 from ..helpers import Manifest, NoManifestError, Error, yes, bin_to_hex, dash_open
 from ..repository import Repository
 
-from .key import KeyfileKey, KeyfileNotFoundError, KeyBlobStorage, identify_key
+from .key import KeyfileKey, KeyBlobStorage, identify_key
 
 
 class UnencryptedRepo(Error):
@@ -106,10 +106,9 @@ class KeyManager:
         lines = (len(binary) + 17) // 18
         repoid = bin_to_hex(self.repository.id)[:18]
         complete_checksum = sha256_truncated(binary, 12)
-        export += 'id: {0:d} / {1} / {2} - {3}\n'.format(lines,
-                                       grouped(repoid),
-                                       grouped(complete_checksum),
-                                       sha256_truncated((str(lines) + '/' + repoid + '/' + complete_checksum).encode('ascii'), 2))
+        export += 'id: {0:d} / {1} / {2} - {3}\n'.format(
+            lines, grouped(repoid), grouped(complete_checksum),
+            sha256_truncated((str(lines) + '/' + repoid + '/' + complete_checksum).encode('ascii'), 2))
         idx = 0
         while len(binary):
             idx += 1
@@ -141,7 +140,7 @@ class KeyManager:
     def import_paperkey(self, args):
         try:
             # imported here because it has global side effects
-            import readline
+            import readline     # noqa: F401
         except ImportError:
             print('Note: No line editing available due to missing readline support')
 
