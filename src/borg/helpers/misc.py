@@ -12,10 +12,10 @@ from operator import attrgetter
 from ..logger import create_logger
 logger = create_logger()
 
-from .time import to_localtime
-from . import msgpack
-from .. import __version__ as borg_version
-from .. import chunker
+from .time import to_localtime              # noqa: E402 - do we need these after creating logger?
+from . import msgpack                       # noqa: E402
+from .. import __version__ as borg_version  # noqa: E402
+from .. import chunker                      # noqa: E402,F401
 
 
 def prune_within(archives, hours, kept_because):
