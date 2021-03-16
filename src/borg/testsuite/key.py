@@ -196,7 +196,8 @@ class TestKey:
         assert key.extract_nonce(manifest2) == 1
         iv = key.extract_nonce(manifest)
         key2 = PassphraseKey.detect(self.MockRepository(), manifest)
-        assert bytes_to_long(key2.enc_cipher.iv, 8) == iv + num_aes_blocks(len(manifest) - PassphraseKey.PAYLOAD_OVERHEAD)
+        assert bytes_to_long(key2.enc_cipher.iv, 8) == iv + num_aes_blocks(
+            len(manifest) - PassphraseKey.PAYLOAD_OVERHEAD)
         assert key.id_key == key2.id_key
         assert key.enc_hmac_key == key2.enc_hmac_key
         assert key.enc_key == key2.enc_key
