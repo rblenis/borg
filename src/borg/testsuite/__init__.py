@@ -8,13 +8,12 @@ import sys
 import sysconfig
 import tempfile
 import time
-import uuid
 import unittest
 
 from ..xattr import get_all
 from ..platform import get_flags
 from ..helpers import umount
-from ..helpers import EXIT_SUCCESS, EXIT_WARNING, EXIT_ERROR
+from ..helpers import EXIT_SUCCESS, EXIT_ERROR
 from .. import platform
 
 # Note: this is used by borg.selftest, do not use or import py.test functionality here.
@@ -222,7 +221,8 @@ class BaseTestCase(unittest.TestCase):
                 d2.append(no_selinux(get_all(path2, follow_symlinks=False)))
             self.assert_equal(d1, d2)
         for sub_diff in diff.subdirs.values():
-            self._assert_dirs_equal_cmp(sub_diff, ignore_bsdflags=ignore_bsdflags, ignore_xattrs=ignore_xattrs, ignore_ns=ignore_ns)
+            self._assert_dirs_equal_cmp(sub_diff, ignore_bsdflags=ignore_bsdflags,
+                                        ignore_xattrs=ignore_xattrs, ignore_ns=ignore_ns)
 
     @contextmanager
     def fuse_mount(self, location, mountpoint=None, *options, **kwargs):
