@@ -1,5 +1,4 @@
 import hashlib
-import io
 import os
 import shutil
 import sys
@@ -12,8 +11,8 @@ import pytest
 from .. import platform
 from ..helpers import Location
 from ..helpers import Buffer
-from ..helpers import partial_format, format_file_size, parse_file_size, format_timedelta, format_line, PlaceholderError, replace_placeholders
-from ..helpers import make_path_safe, clean_lines
+from ..helpers import partial_format, format_file_size, parse_file_size, format_timedelta, format_line
+from ..helpers import make_path_safe, clean_lines, PlaceholderError, replace_placeholders
 from ..helpers import interval, prune_within, prune_split
 from ..helpers import get_base_dir, get_cache_dir, get_keys_dir, get_security_dir, get_config_dir
 from ..helpers import is_slow_msgpack
@@ -77,22 +76,26 @@ class TestLocationWithoutEnv:
             "Location(proto='ssh', user='user', host='2001:db8::', port=1234, path='/some/path', archive='archive')"
         assert repr(Location('ssh://user@[2001:db8::]:1234/some/path')) == \
             "Location(proto='ssh', user='user', host='2001:db8::', port=1234, path='/some/path', archive=None)"
-        assert Location('ssh://user@[2001:db8::]:1234/some/path').to_key_filename() == keys_dir + '2001_db8____some_path'
+        assert Location('ssh://user@[2001:db8::]:1234/some/path').to_key_filename() == keys_dir + \
+            '2001_db8____some_path'
         assert repr(Location('ssh://user@[2001:db8::]/some/path')) == \
             "Location(proto='ssh', user='user', host='2001:db8::', port=None, path='/some/path', archive=None)"
         assert repr(Location('ssh://user@[2001:db8::c0:ffee]:1234/some/path::archive')) == \
-            "Location(proto='ssh', user='user', host='2001:db8::c0:ffee', port=1234, path='/some/path', archive='archive')"
+            "Location(proto='ssh', user='user', host='2001:db8::c0:ffee', port=1234, path='/some/path', " \
+            "archive='archive')"
         assert repr(Location('ssh://user@[2001:db8::c0:ffee]:1234/some/path')) == \
             "Location(proto='ssh', user='user', host='2001:db8::c0:ffee', port=1234, path='/some/path', archive=None)"
         assert repr(Location('ssh://user@[2001:db8::c0:ffee]/some/path')) == \
             "Location(proto='ssh', user='user', host='2001:db8::c0:ffee', port=None, path='/some/path', archive=None)"
         assert repr(Location('ssh://user@[2001:db8::192.0.2.1]:1234/some/path::archive')) == \
-            "Location(proto='ssh', user='user', host='2001:db8::192.0.2.1', port=1234, path='/some/path', archive='archive')"
+            "Location(proto='ssh', user='user', host='2001:db8::192.0.2.1', port=1234, path='/some/path', " \
+            "archive='archive')"
         assert repr(Location('ssh://user@[2001:db8::192.0.2.1]:1234/some/path')) == \
             "Location(proto='ssh', user='user', host='2001:db8::192.0.2.1', port=1234, path='/some/path', archive=None)"
         assert repr(Location('ssh://user@[2001:db8::192.0.2.1]/some/path')) == \
             "Location(proto='ssh', user='user', host='2001:db8::192.0.2.1', port=None, path='/some/path', archive=None)"
-        assert Location('ssh://user@[2001:db8::192.0.2.1]/some/path').to_key_filename() == keys_dir + '2001_db8__192_0_2_1__some_path'
+        assert Location('ssh://user@[2001:db8::192.0.2.1]/some/path').to_key_filename() == keys_dir + \
+            '2001_db8__192_0_2_1__some_path'
 
     def test_file(self, monkeypatch, keys_dir):
         monkeypatch.delenv('BORG_REPO', raising=False)
@@ -117,14 +120,17 @@ class TestLocationWithoutEnv:
         assert repr(Location('user@[2001:db8::]:/some/path')) == \
             "Location(proto='ssh', user='user', host='2001:db8::', port=None, path='/some/path', archive=None)"
         assert repr(Location('user@[2001:db8::c0:ffee]:/some/path::archive')) == \
-            "Location(proto='ssh', user='user', host='2001:db8::c0:ffee', port=None, path='/some/path', archive='archive')"
+            "Location(proto='ssh', user='user', host='2001:db8::c0:ffee', port=None, path='/some/path', " \
+            "archive='archive')"
         assert repr(Location('user@[2001:db8::c0:ffee]:/some/path')) == \
             "Location(proto='ssh', user='user', host='2001:db8::c0:ffee', port=None, path='/some/path', archive=None)"
         assert repr(Location('user@[2001:db8::192.0.2.1]:/some/path::archive')) == \
-            "Location(proto='ssh', user='user', host='2001:db8::192.0.2.1', port=None, path='/some/path', archive='archive')"
+            "Location(proto='ssh', user='user', host='2001:db8::192.0.2.1', port=None, path='/some/path', " \
+            "archive='archive')"
         assert repr(Location('user@[2001:db8::192.0.2.1]:/some/path')) == \
             "Location(proto='ssh', user='user', host='2001:db8::192.0.2.1', port=None, path='/some/path', archive=None)"
-        assert Location('user@[2001:db8::192.0.2.1]:/some/path').to_key_filename() == keys_dir + '2001_db8__192_0_2_1__some_path'
+        assert Location('user@[2001:db8::192.0.2.1]:/some/path').to_key_filename() == keys_dir + \
+            '2001_db8__192_0_2_1__some_path'
 
     def test_smb(self, monkeypatch, keys_dir):
         monkeypatch.delenv('BORG_REPO', raising=False)
@@ -191,7 +197,8 @@ class TestLocationWithoutEnv:
 
     def test_with_timestamp(self):
         assert repr(Location('path::archive-{utcnow}').with_timestamp(datetime(2002, 9, 19, tzinfo=timezone.utc))) == \
-            "Location(proto='file', user=None, host=None, port=None, path='path', archive='archive-2002-09-19T00:00:00')"
+            "Location(proto='file', user=None, host=None, port=None, path='path', " \
+            "archive='archive-2002-09-19T00:00:00')"
 
     def test_underspecified(self, monkeypatch):
         monkeypatch.delenv('BORG_REPO', raising=False)
@@ -219,8 +226,8 @@ class TestLocationWithoutEnv:
     def test_format_path(self, monkeypatch):
         monkeypatch.delenv('BORG_REPO', raising=False)
         test_pid = os.getpid()
-        assert repr(Location('/some/path::archive{pid}')) == \
-            "Location(proto='file', user=None, host=None, port=None, path='/some/path', archive='archive{}')".format(test_pid)
+        assert repr(Location('/some/path::archive{pid}')) == "Location(proto='file', user=None, host=None, " \
+            "port=None, path='/some/path', archive='archive{}')".format(test_pid)
         location_time1 = Location('/some/path::archive{now:%s}')
         sleep(1.1)
         location_time2 = Location('/some/path::archive{now:%s}')
@@ -445,7 +452,8 @@ class StableDictTestCase(BaseTestCase):
 class TestParseTimestamp(BaseTestCase):
 
     def test(self):
-        self.assert_equal(parse_timestamp('2015-04-19T20:25:00.226410'), datetime(2015, 4, 19, 20, 25, 0, 226410, timezone.utc))
+        self.assert_equal(parse_timestamp('2015-04-19T20:25:00.226410'),
+                          datetime(2015, 4, 19, 20, 25, 0, 226410, timezone.utc))
         self.assert_equal(parse_timestamp('2015-04-19T20:25:00'), datetime(2015, 4, 19, 20, 25, 0, 0, timezone.utc))
 
 
@@ -501,7 +509,8 @@ def test_get_security_dir(monkeypatch):
     monkeypatch.delenv('BORG_SECURITY_DIR', raising=False)
     monkeypatch.delenv('XDG_CONFIG_HOME', raising=False)
     assert get_security_dir() == os.path.join(os.path.expanduser('~'), '.config', 'borg', 'security')
-    assert get_security_dir(repository_id='1234') == os.path.join(os.path.expanduser('~'), '.config', 'borg', 'security', '1234')
+    assert get_security_dir(repository_id='1234') == os.path.join(os.path.expanduser('~'),
+                                                                  '.config', 'borg', 'security', '1234')
     monkeypatch.setenv('XDG_CONFIG_HOME', '/var/tmp/.config')
     assert get_security_dir() == os.path.join('/var/tmp/.config', 'borg', 'security')
     monkeypatch.setenv('BORG_SECURITY_DIR', '/var/tmp')
@@ -957,15 +966,16 @@ class TestPopenWithErrorHandling:
         proc = popen_with_error_handling('test 1')
         assert proc.wait() == 0
 
-    @pytest.mark.skipif(shutil.which('borg-foobar-test-notexist'), reason='"borg-foobar-test-notexist" binary exists (somehow?)')
+    @pytest.mark.skipif(shutil.which('borg-foobar-test-notexist'),
+                        reason='"borg-foobar-test-notexist" binary exists (somehow?)')
     def test_not_found(self):
         proc = popen_with_error_handling('borg-foobar-test-notexist 1234')
         assert proc is None
 
     @pytest.mark.parametrize('cmd', (
-            'mismatched "quote',
-            'foo --bar="baz',
-            ''
+        'mismatched "quote',
+        'foo --bar="baz',
+        ''
     ))
     def test_bad_syntax(self, cmd):
         proc = popen_with_error_handling(cmd)
