@@ -15,7 +15,6 @@ import pwd
 import re
 import shlex
 import signal
-import socket
 import stat
 import subprocess
 import sys
@@ -79,7 +78,10 @@ from . import __version_tuple__ as borg_version_tuple
 from . import chunker
 from . import hashindex
 from . import shellpattern
-from .constants import *  # NOQA
+from .constants import EXIT_WARNING, EXIT_SIGNAL_BASE     # noqa: F401
+from .constants import EXIT_SUCCESS, EXIT_ERROR, BUFSIZE, MAX_OBJECT_SIZE, LIST_SCAN_LIMIT, MAX_ARCHIVES
+from .constants import ISO_FORMAT, ISO_FORMAT_NO_USECS, ITEM_KEYS, CACHE_TAG_NAME, CACHE_TAG_CONTENTS
+from .constants import CHUNKER_PARAMS, DEFAULT_FILES_CACHE_MODE, DEFAULT_FILES_CACHE_MODE_UI
 
 
 # generic mechanism to enable users to invoke workarounds by setting the
@@ -303,7 +305,8 @@ class Archives(abc.MutableMapping):
         get a list of archives, considering --first/last/prefix/glob-archives/sort cmdline args
         """
         if args.location.archive:
-            raise Error('The options --first, --last, --prefix and --glob-archives can only be used on repository targets.')
+            raise Error('The options --first, --last, --prefix and --glob-archives can only be used on repository '
+                        'targets.')
         if args.prefix is not None:
             args.glob_archives = args.prefix + '*'
         return self.list(sort_by=args.sort_by.split(','), glob=args.glob_archives, first=args.first, last=args.last)
@@ -382,7 +385,8 @@ class Manifest:
             key = key_factory(repository, cdata)
         manifest = cls(key, repository)
         data = key.decrypt(None, cdata)
-        manifest_dict, manifest.tam_verified = key.unpack_and_verify_manifest(data, force_tam_not_required=force_tam_not_required)
+        manifest_dict, manifest.tam_verified = key.unpack_and_verify_manifest(
+            data, force_tam_not_required=force_tam_not_required)
         m = ManifestItem(internal_dict=manifest_dict)
         manifest.id = key.id_hash(data)
         if m.get('version') not in (1, 2):
@@ -1046,8 +1050,8 @@ def bin_to_hex(binary):
 
 
 def parse_stringified_list(s):
-    l = re.split(" *, *", s)
-    return [item for item in l if item != '']
+    items = re.split(" *, *", s)
+    return [item for item in items if item != '']
 
 
 class Location:
@@ -1069,20 +1073,20 @@ class Location:
     # path must not contain :: (it ends at :: or string end), but may contain single colons.
     # to avoid ambiguities with other regexes, it must also not start with ":" nor with "//" nor with "ssh://".
     scp_path_re = r"""
-        (?!(:|//|ssh://))                                   # not starting with ":" or // or ssh://
-        (?P<path>([^:]|(:(?!:)))+)                          # any chars, but no "::"
+        (?!(:|//|ssh://))                           # not starting with ":" or // or ssh://
+        (?P<path>([^:]|(:(?!:)))+)                  # any chars, but no "::"
         """
 
     # file_path must not contain :: (it ends at :: or string end), but may contain single colons.
     # it must start with a / and that slash is part of the path.
     file_path_re = r"""
-        (?P<path>(([^/]*)/([^:]|(:(?!:)))+))                # start opt. servername, then /, then any chars, but no "::"
+        (?P<path>(([^/]*)/([^:]|(:(?!:)))+))        # start opt. servername, then /, then any chars, but no "::"
         """
 
     # abs_path must not contain :: (it ends at :: or string end), but may contain single colons.
     # it must start with a / and that slash is part of the path.
     abs_path_re = r"""
-        (?P<path>(/([^:]|(:(?!:)))+))                       # start with /, then any chars, but no "::"
+        (?P<path>(/([^:]|(:(?!:)))+))               # start with /, then any chars, but no "::"
         """
 
     # optional ::archive_name at the end, archive name must not contain "/".
@@ -1090,37 +1094,37 @@ class Location:
     # the archive names and of course "/" is not valid in a directory name.
     optional_archive_re = r"""
         (?:
-            ::                                              # "::" as separator
-            (?P<archive>[^/]+)                              # archive name must not contain "/"
-        )?$"""                                              # must match until the end
+            ::                                      # "::" as separator
+            (?P<archive>[^/]+)                      # archive name must not contain "/"
+        )?$"""                                      # must match until the end
 
     # regexes for misc. kinds of supported location specifiers:
     ssh_re = re.compile(r"""
-        (?P<proto>ssh)://                                   # ssh://
-        """ + optional_user_re + r"""                       # user@  (optional)
+        (?P<proto>ssh)://                           # ssh://
+        """ + optional_user_re + r"""               # user@  (optional)
         (?P<host>([^:/]+|\[[0-9a-fA-F:.]+\]))(?::(?P<port>\d+))?  # host or host:port or [ipv6] or [ipv6]:port
         """ + abs_path_re + optional_archive_re, re.VERBOSE)  # path or path::archive
 
     file_re = re.compile(r"""
-        (?P<proto>file)://                                  # file://
+        (?P<proto>file)://                          # file://
         """ + file_path_re + optional_archive_re, re.VERBOSE)  # servername/path, path or path::archive
 
     # note: scp_re is also use for local paths
     scp_re = re.compile(r"""
         (
-            """ + optional_user_re + r"""                   # user@  (optional)
-            (?P<host>([^:/]+|\[[0-9a-fA-F:.]+\])):          # host: (don't match / or [ipv6] in host to disambiguate from file:)
-        )?                                                  # user@host: part is optional
+            """ + optional_user_re + r"""           # user@  (optional)
+            (?P<host>([^:/]+|\[[0-9a-fA-F:.]+\])):  # host: (don't match / or [ipv6] in host to disambiguate from file:)
+        )?                                          # user@host: part is optional
         """ + scp_path_re + optional_archive_re, re.VERBOSE)  # path with optional archive
 
     # get the repo from BORG_REPO env and the optional archive from param.
     # if the syntax requires giving REPOSITORY (see "borg mount"),
     # use "::" to let it use the env var.
     # if REPOSITORY argument is optional, it'll automatically use the env.
-    env_re = re.compile(r"""                                # the repo part is fetched from BORG_REPO
-        (?:::$)                                             # just "::" is ok (when a pos. arg is required, no archive)
-        |                                                   # or
-        """ + optional_archive_re, re.VERBOSE)              # archive name (optional, may be empty)
+    env_re = re.compile(r"""                        # the repo part is fetched from BORG_REPO
+        (?:::$)                                     # just "::" is ok (when a pos. arg is required, no archive)
+        |                                           # or
+        """ + optional_archive_re, re.VERBOSE)      # archive name (optional, may be empty)
 
     def __init__(self, text='', overrides={}):
         if not self.parse(text, overrides):
@@ -1378,8 +1382,7 @@ def is_slow_msgpack():
 def is_supported_msgpack():
     # DO NOT CHANGE OR REMOVE! See also requirements and comments in setup.py.
     v = msgpack.version[:3]
-    return (0, 4, 6) <= v <= (0, 5, 6) and \
-           v not in [(0, 5, 0), (0, 5, 2), (0, 5, 3), (0, 5, 5)]
+    return (0, 4, 6) <= v <= (0, 5, 6) and v not in [(0, 5, 0), (0, 5, 2), (0, 5, 3), (0, 5, 5)]
 
 
 FALSISH = ('No', 'NO', 'no', 'N', 'n', '0', )
