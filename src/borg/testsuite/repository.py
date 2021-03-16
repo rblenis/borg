@@ -13,7 +13,7 @@ from ..helpers import Location
 from ..helpers import IntegrityError
 from ..helpers import msgpack
 from ..locking import Lock, LockFailed
-from ..remote import RemoteRepository, InvalidRPCMethod, PathNotAllowed, ConnectionClosedWithHint, handle_remote_line
+from ..remote import RemoteRepository, InvalidRPCMethod, PathNotAllowed, handle_remote_line
 from ..repository import Repository, LoggedIO, MAGIC, MAX_DATA_SIZE, TAG_DELETE, TAG_PUT, TAG_COMMIT
 from . import BaseTestCase
 from .hashindex import H
@@ -673,7 +673,8 @@ class RepositoryAuxiliaryCorruptionTestCase(RepositoryTestCaseBase):
         with self.repository:
             self.repository.append_only = False
             self.repository.put(H(3), b'1234')
-            # Do a compaction run. Fails, since the corrupted refcount was not detected and leads to an assertion failure.
+            # Do a compaction run. Fails, since the corrupted refcount was not detected
+            # and leads to an assertion failure.
             with pytest.raises(AssertionError) as exc_info:
                 self.repository.commit()
             assert 'Corrupted segment reference count' in str(exc_info.value)
@@ -687,7 +688,8 @@ class RepositoryCheckTestCase(RepositoryTestCaseBase):
     def check(self, repair=False, status=True):
         self.assert_equal(self.repository.check(repair=repair), status)
         # Make sure no tmp files are left behind
-        self.assert_equal([name for name in os.listdir(os.path.join(self.tmppath, 'repository')) if 'tmp' in name], [], 'Found tmp files')
+        self.assert_equal([name for name in os.listdir(os.path.join(self.tmppath, 'repository')) if 'tmp' in name],
+                          [], 'Found tmp files')
 
     def get_objects(self, *ids):
         for id_ in ids:
@@ -700,7 +702,8 @@ class RepositoryCheckTestCase(RepositoryTestCaseBase):
             self.repository.commit()
 
     def get_head(self):
-        return sorted(int(n) for n in os.listdir(os.path.join(self.tmppath, 'repository', 'data', '0')) if n.isdigit())[-1]
+        return sorted(int(n) for n in os.listdir(os.path.join(self.tmppath, 'repository', 'data', '0'))
+                      if n.isdigit())[-1]
 
     def open_index(self):
         return NSIndex.read(os.path.join(self.tmppath, 'repository', 'index.{}'.format(self.get_head())))
@@ -912,7 +915,8 @@ class RemoteRepositoryTestCase(RepositoryTestCase):
         assert self.repository.ssh_cmd(Location('example.com:foo')) == ['ssh', 'example.com']
         assert self.repository.ssh_cmd(Location('ssh://example.com/foo')) == ['ssh', 'example.com']
         assert self.repository.ssh_cmd(Location('ssh://user@example.com/foo')) == ['ssh', 'user@example.com']
-        assert self.repository.ssh_cmd(Location('ssh://user@example.com:1234/foo')) == ['ssh', '-p', '1234', 'user@example.com']
+        assert self.repository.ssh_cmd(Location('ssh://user@example.com:1234/foo')) == ['ssh', '-p', '1234',
+                                                                                        'user@example.com']
         os.environ['BORG_RSH'] = 'ssh --foo'
         assert self.repository.ssh_cmd(Location('example.com:foo')) == ['ssh', '--foo', 'example.com']
 
