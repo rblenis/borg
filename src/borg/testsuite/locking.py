@@ -3,10 +3,9 @@ import time
 
 import pytest
 
-from ..helpers import daemonize
 from ..platform import get_process_id, process_alive
-from ..locking import TimeoutTimer, ExclusiveLock, Lock, LockRoster, \
-                      ADD, REMOVE, SHARED, EXCLUSIVE, LockTimeout, NotLocked, NotMyLock
+from ..locking import TimeoutTimer, ExclusiveLock, Lock, LockRoster, ADD, REMOVE, SHARED, EXCLUSIVE, LockTimeout
+from ..locking import NotLocked, NotMyLock
 
 ID1 = "foo", 1, 1
 ID2 = "bar", 2, 2
