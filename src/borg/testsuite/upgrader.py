@@ -3,7 +3,7 @@ import tarfile
 
 import pytest
 
-from ..constants import *  # NOQA
+from ..constants import UMASK_DEFAULT
 from ..crypto.key import KeyfileKey
 from ..upgrader import AtticRepositoryUpgrader, AtticKeyfileKey
 from ..helpers import get_keys_dir
