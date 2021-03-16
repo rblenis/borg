@@ -5,14 +5,16 @@ import shutil
 import stat
 import struct
 import time
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 from collections import defaultdict
 from configparser import ConfigParser
 from datetime import datetime
 from functools import partial
 from itertools import islice
 
-from .constants import *  # NOQA
+from .constants import REPOSITORY_README, DEFAULT_SEGMENTS_PER_DIR, DEFAULT_MAX_SEGMENT_SIZE, MAX_SEGMENT_SIZE_LIMIT
+from .constants import MAX_OBJECT_SIZE, ISO_FORMAT, FD_MAX_AGE, MAX_DATA_SIZE
+from .constants import LIST_SCAN_LIMIT  # noqa: F401
 from .hashindex import NSIndex
 from .helpers import Error, ErrorWithTraceback, IntegrityError, format_file_size, parse_file_size
 from .helpers import Location
@@ -369,9 +371,8 @@ class Repository:
         shutil.rmtree(self.path)
 
     def get_index_transaction_id(self):
-        indices = sorted(int(fn[6:])
-                         for fn in os.listdir(self.path)
-                         if fn.startswith('index.') and fn[6:].isdigit() and os.stat(os.path.join(self.path, fn)).st_size != 0)
+        indices = sorted(int(fn[6:]) for fn in os.listdir(self.path) if (
+            fn.startswith('index.') and fn[6:].isdigit() and os.stat(os.path.join(self.path, fn)).st_size != 0))
         if indices:
             return indices[-1]
         else:
@@ -418,7 +419,8 @@ class Repository:
         if not stat.S_ISDIR(st.st_mode):
             raise self.InvalidRepository(path)
         if lock:
-            self.lock = Lock(os.path.join(path, 'lock'), exclusive, timeout=lock_wait, kill_stale_locks=hostname_is_unique()).acquire()
+            self.lock = Lock(os.path.join(path, 'lock'), exclusive, timeout=lock_wait,
+                             kill_stale_locks=hostname_is_unique()).acquire()
         else:
             self.lock = None
         self.config = ConfigParser(interpolation=None)
@@ -683,7 +685,8 @@ class Repository:
                         pass
                 logger.debug('check_free_space: few segments, not requiring a full free segment')
                 compact_working_space = min(compact_working_space, full_segment_size)
-                logger.debug('check_free_space: calculated working space for compact as %d bytes', compact_working_space)
+                logger.debug('check_free_space: calculated working space for compact as %d bytes',
+                             compact_working_space)
                 required_free_space += compact_working_space
             else:
                 # Keep one full worst-case segment free in non-append-only mode
@@ -726,7 +729,8 @@ class Repository:
             nonlocal unused
             # commit the new, compact, used segments
             segment = self.io.write_commit(intermediate=intermediate)
-            logger.debug('complete_xfer: wrote %scommit at segment %d', 'intermediate ' if intermediate else '', segment)
+            logger.debug('complete_xfer: wrote %scommit at segment %d', 'intermediate ' if intermediate else '',
+                         segment)
             # get rid of the old, sparse, unused segments. free space.
             for segment in unused:
                 logger.debug('complete_xfer: deleting unused segment %d', segment)
@@ -793,8 +797,8 @@ class Repository:
                         #
                         # However, this only happens if the crash also affects the FS to the effect that file deletions
                         # did not materialize consistently after journal recovery. If they always materialize in-order
-                        # then this is not a problem, because the old segment containing a deleted object would be deleted
-                        # before the segment containing the delete.
+                        # then this is not a problem, because the old segment containing a deleted object would be
+                        # deleted before the segment containing the delete.
                         #
                         # Consider the following series of operations if we would not do this, ie. this entire if:
                         # would be removed.
@@ -813,13 +817,14 @@ class Repository:
                         #
                         # Now we crash. But only segment 2 gets deleted, while segment 1 is still around. Now key 1
                         # is suddenly undeleted (because the delete in segment 2 is now missing).
-                        # Again, note the requirement here. We delete these in the correct order that this doesn't happen,
-                        # and only if the FS materialization of these deletes is reordered or parts dropped this can happen.
-                        # In this case it doesn't cause outright corruption, 'just' an index count mismatch, which will be
-                        # fixed by borg-check --repair.
+                        # Again, note the requirement here. We delete these in the correct order that this doesn't
+                        # happen, and only if the FS materialization of these deletes is reordered or parts dropped
+                        # this can happen. In this case it doesn't cause outright corruption, 'just' an index count
+                        # mismatch, which will be fixed by borg-check --repair.
                         #
-                        # Note that in this check the index state is the proxy for a "most definitely settled" repository state,
-                        # ie. the assumption is that *all* operations on segments <= index state are completed and stable.
+                        # Note that in this check the index state is the proxy for a "most definitely settled"
+                        # repository state, ie. the assumption is that *all* operations on segments <= index state are
+                        # completed and stable.
                         try:
                             new_segment, size = self.io.write_delete(key, raise_full=True)
                         except LoggedIO.SegmentFull:
@@ -1526,8 +1531,8 @@ class LoggedIO:
         if read_data:
             data = fd.read(length)
             if len(data) != length:
-                raise IntegrityError('Segment entry data short read [segment {}, offset {}]: expected {}, got {} bytes'.format(
-                    segment, offset, length, len(data)))
+                raise IntegrityError('Segment entry data short read [segment {}, offset {}]: expected {}, got '
+                                     '{} bytes'.format(segment, offset, length, len(data)))
             if crc32(data, crc32(memoryview(header)[4:])) & 0xffffffff != crc:
                 raise IntegrityError('Segment entry checksum mismatch [segment {}, offset {}]'.format(
                     segment, offset))
@@ -1538,17 +1543,17 @@ class LoggedIO:
                 key = fd.read(32)
                 length -= 32
                 if len(key) != 32:
-                    raise IntegrityError('Segment entry key short read [segment {}, offset {}]: expected {}, got {} bytes'.format(
-                        segment, offset, 32, len(key)))
+                    raise IntegrityError('Segment entry key short read [segment {}, offset {}]: expected {}, got '
+                                         '{} bytes'.format(segment, offset, 32, len(key)))
             oldpos = fd.tell()
             seeked = fd.seek(length, os.SEEK_CUR) - oldpos
             data = None
             if seeked != length:
-                raise IntegrityError('Segment entry data short seek [segment {}, offset {}]: expected {}, got {} bytes'.format(
-                        segment, offset, length, seeked))
+                raise IntegrityError('Segment entry data short seek [segment {}, offset {}]: expected {}, got '
+                                     '{} bytes'.format(segment, offset, length, seeked))
         if tag not in acceptable_tags:
-            raise IntegrityError('Invalid segment entry header, did not get acceptable tag [segment {}, offset {}]'.format(
-                segment, offset))
+            raise IntegrityError('Invalid segment entry header, did not get acceptable tag [segment {}, '
+                                 'offset {}]'.format(segment, offset))
         return size, tag, key, data
 
     def write_put(self, id, data, raise_full=False):
