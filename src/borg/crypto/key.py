@@ -13,7 +13,7 @@ from borg.logger import create_logger
 
 logger = create_logger()
 
-from ..constants import *  # NOQA
+from ..constants import PBKDF2_ITERATIONS
 from ..compress import Compressor
 from ..helpers import StableDict
 from ..helpers import Error, IntegrityError
@@ -377,7 +377,7 @@ class AESKeyBase(KeyBase):
 
     def decrypt(self, id, data, decompress=True):
         if not (data[0] == self.TYPE or
-            data[0] == PassphraseKey.TYPE and isinstance(self, RepoKey)):
+                data[0] == PassphraseKey.TYPE and isinstance(self, RepoKey)):
             id_str = bin_to_hex(id) if id is not None else '(unknown)'
             raise IntegrityError('Chunk %s: Invalid encryption envelope' % id_str)
         data_view = memoryview(data)
@@ -398,7 +398,7 @@ class AESKeyBase(KeyBase):
 
     def extract_nonce(self, payload):
         if not (payload[0] == self.TYPE or
-            payload[0] == PassphraseKey.TYPE and isinstance(self, RepoKey)):
+                payload[0] == PassphraseKey.TYPE and isinstance(self, RepoKey)):
             raise IntegrityError('Manifest: Invalid encryption envelope')
         nonce = bytes_to_long(payload[33:41])
         return nonce
@@ -494,10 +494,9 @@ class Passphrase(str):
                 passphrase.encode('ascii')
             except UnicodeEncodeError:
                 print('Your passphrase (UTF-8 encoding in hex): %s' %
-                      bin_to_hex(passphrase.encode('utf-8')),
-                      file=sys.stderr)
-                print('As you have a non-ASCII passphrase, it is recommended to keep the UTF-8 encoding in hex together with the passphrase at a safe place.',
-                      file=sys.stderr)
+                      bin_to_hex(passphrase.encode('utf-8')), file=sys.stderr)
+                print('As you have a non-ASCII passphrase, it is recommended to keep the UTF-8 encoding in hex '
+                      'together with the passphrase at a safe place.', file=sys.stderr)
 
     @classmethod
     def new(cls, allow_empty=False):
