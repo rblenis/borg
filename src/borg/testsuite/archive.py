@@ -196,8 +196,8 @@ def item_keys_serialized():
     return [msgpack.packb(name) for name in ITEM_KEYS]
 
 
-@pytest.mark.parametrize('packed',
-    [b'', b'x', b'foobar', ] +
+@pytest.mark.parametrize(
+    'packed', [b'', b'x', b'foobar', ] +
     [msgpack.packb(o) for o in (
         [None, 0, 0.0, False, '', {}, [], ()] +
         [42, 23.42, True, b'foobar', {b'foo': b'bar'}, [b'foo', b'bar'], (b'foo', b'bar')]
@@ -210,8 +210,8 @@ def test_invalid_msgpacked_item(packed, item_keys_serialized):
 IK = sorted(list(ITEM_KEYS))
 
 
-@pytest.mark.parametrize('packed',
-    [msgpack.packb(o) for o in [
+@pytest.mark.parametrize(
+    'packed', [msgpack.packb(o) for o in [
         {b'path': b'/a/b/c'},  # small (different msgpack mapping type!)
         OrderedDict((k, b'') for k in IK),  # as big (key count) as it gets
         OrderedDict((k, b'x' * 1000) for k in IK),  # as big (key count and volume) as it gets
