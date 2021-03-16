@@ -283,8 +283,8 @@ class FuseOperations(llfuse.Operations):
                      format_file_size(sys.getsizeof(self.parent) + len(self.parent) * sys.getsizeof(self._inode_count)))
         logger.debug('fuse: %d pending archives', len(self.pending_archives))
         logger.debug('fuse: ItemCache %d entries (%d direct, %d indirect), meta-array size %s, direct items size %s',
-                     self.cache.direct_items + self.cache.indirect_items, self.cache.direct_items, self.cache.indirect_items,
-                     format_file_size(sys.getsizeof(self.cache.meta)),
+                     self.cache.direct_items + self.cache.indirect_items, self.cache.direct_items,
+                     self.cache.indirect_items, format_file_size(sys.getsizeof(self.cache.meta)),
                      format_file_size(os.stat(self.cache.fd.fileno()).st_size))
         logger.debug('fuse: data cache: %d/%d entries, %s', len(self.data_cache.items()), self.data_cache._capacity,
                      format_file_size(sum(len(chunk) for key, chunk in self.data_cache.items())))
@@ -551,8 +551,10 @@ class FuseOperations(llfuse.Operations):
         entry.attr_timeout = 300
         entry.st_mode = item.mode & ~self.umask
         entry.st_nlink = item.get('nlink', 1)
-        entry.st_uid = self.uid_forced if self.uid_forced is not None else item.uid if item.uid >= 0 else self.default_uid
-        entry.st_gid = self.gid_forced if self.gid_forced is not None else item.gid if item.gid >= 0 else self.default_gid
+        entry.st_uid = self.uid_forced if self.uid_forced is not None else item.uid if item.uid >= 0 else \
+            self.default_uid
+        entry.st_gid = self.gid_forced if self.gid_forced is not None else item.gid if item.gid >= 0 else \
+            self.default_gid
         entry.st_rdev = item.get('rdev', 0)
         entry.st_size = item.get_size()
         entry.st_blksize = 512
