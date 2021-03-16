@@ -1,7 +1,6 @@
 import errno
 import json
 import os
-import socket
 import stat
 import sys
 import time
@@ -22,14 +21,17 @@ from .chunker import Chunker
 from .cache import ChunkListEntry
 from .crypto.key import key_factory
 from .compress import Compressor, CompressionSpec
-from .constants import *  # NOQA
+from .constants import ARCHIVE_KEYS, ITEMS_CHUNKER_PARAMS, CHUNKER_PARAMS, MAX_DATA_SIZE, ISO_FORMAT, EXIT_WARNING
+from .constants import REQUIRED_ARCHIVE_KEYS, REQUIRED_ITEM_KEYS, DASHES
+from .constants import CACHE_TAG_NAME, CACHE_TAG_CONTENTS
+from .constants import ITEM_KEYS    # noqa: F401 - needed by testsuite/archive.py
 from .hashindex import ChunkIndex, ChunkIndexEntry, CacheSynchronizer
 from .helpers import Manifest
 from .helpers import hardlinkable
 from .helpers import ChunkIteratorFileWrapper, open_item
 from .helpers import Error, IntegrityError, set_ec
 from .helpers import uid2user, user2uid, gid2group, group2gid
-from .helpers import parse_timestamp, to_localtime
+from .helpers import parse_timestamp
 from .helpers import OutputTimestamp, format_timedelta, format_file_size, file_status, FileSize
 from .helpers import safe_encode, safe_decode, make_path_safe, remove_surrogates
 from .helpers import StableDict
@@ -312,7 +314,7 @@ class Archive:
         """Archive {} already exists"""
 
     class IncompatibleFilesystemEncodingError(Error):
-        """Failed to encode filename "{}" into file system encoding "{}". Consider configuring the LANG environment variable."""
+        """Failed to encode filename "{}" into file system encoding "{}". Consider configuring the LANG environment variable."""    # noqa: E501
 
     def __init__(self, repository, key, manifest, name, cache=None, create=False,
                  checkpoint_interval=1800, numeric_owner=False, noatime=False, noctime=False, nobirthtime=False,
@@ -338,7 +340,8 @@ class Archive:
         self.nobsdflags = nobsdflags
         self.noacls = noacls
         self.noxattrs = noxattrs
-        assert (start is None) == (start_monotonic is None), 'Logic error: if start is given, start_monotonic must be given as well and vice versa.'
+        assert (start is None) == (start_monotonic is None), \
+            'Logic error: if start is given, start_monotonic must be given as well and vice versa.'
         if start is None:
             start = datetime.utcnow()
             start_monotonic = time.monotonic()
@@ -538,7 +541,8 @@ Utilization of max. archive size: {csize_max:.0%}
         archive_index = ChunkIndex()
         sync = CacheSynchronizer(archive_index)
         add(self.id)
-        pi = ProgressIndicatorPercent(total=len(self.metadata.items), msg='Calculating statistics... %3d%%', msgid='archive.calc_stats')
+        pi = ProgressIndicatorPercent(total=len(self.metadata.items), msg='Calculating statistics... %3d%%',
+                                      msgid='archive.calc_stats')
         for id, chunk in zip(self.metadata.items, self.repository.get_many(self.metadata.items)):
             pi.show(increase=1)
             add(id)
@@ -548,11 +552,11 @@ Utilization of max. archive size: {csize_max:.0%}
         pi.finish()
         stats = Statistics()
         stats.nfiles = sync.num_files_totals if self.consider_part_files \
-                       else sync.num_files_totals - sync.num_files_parts
+            else sync.num_files_totals - sync.num_files_parts
         stats.osize = sync.size_totals if self.consider_part_files \
-                      else sync.size_totals - sync.size_parts
+            else sync.size_totals - sync.size_parts
         stats.csize = sync.csize_totals if self.consider_part_files \
-                      else sync.csize_totals - sync.csize_parts
+            else sync.csize_totals - sync.csize_parts
         stats.usize = unique_csize  # the part files use same chunks as the full file
         return stats
 
@@ -768,8 +772,8 @@ Utilization of max. archive size: {csize_max:.0%}
         if not self.noacls:
             acl_set(path, item, self.numeric_owner)
         if not self.noxattrs:
-            # chown removes Linux capabilities, so set the extended attributes at the end, after chown, since they include
-            # the Linux capabilities in the "security.capability" attribute.
+            # chown removes Linux capabilities, so set the extended attributes at the end, after chown, since they
+            # include the Linux capabilities in the "security.capability" attribute.
             xattrs = item.get('xattrs', {})
             for k, v in xattrs.items():
                 try:
@@ -782,12 +786,13 @@ Utilization of max. archive size: {csize_max:.0%}
                         err_str = 'xattrs not supported on this filesystem'
                     elif e.errno == errno.ENOSPC:
                         # no space left on device while setting this specific xattr
-                        # ext4 reports ENOSPC when trying to set an xattr with >4kiB while ext4 can only support 4kiB xattrs
-                        # (in this case, this is NOT a "disk full" error, just a ext4 limitation).
+                        # ext4 reports ENOSPC when trying to set an xattr with >4kiB while ext4 can only support 4kiB
+                        # xattrs (in this case, this is NOT a "disk full" error, just a ext4 limitation).
                         err_str = 'no space left on device [xattr len = %d]' % (len(v), )
                     else:
                         # generic handler
-                        # EACCES: permission denied to set this specific xattr (this may happen related to security.* keys)
+                        # EACCES: permission denied to set this specific xattr (this may happen related to security.*
+                        #         keys)
                         # EPERM: operation not permitted
                         err_str = os.strerror(e.errno)
                     logger.warning(msg_format % err_str)
@@ -847,7 +852,8 @@ Utilization of max. archive size: {csize_max:.0%}
         try:
             unpacker = msgpack.Unpacker(use_list=False)
             items_ids = self.metadata.items
-            pi = ProgressIndicatorPercent(total=len(items_ids), msg="Decrementing references %3.0f%%", msgid='archive.delete')
+            pi = ProgressIndicatorPercent(total=len(items_ids), msg="Decrementing references %3.0f%%",
+                                          msgid='archive.delete')
             for (i, (items_id, data)) in enumerate(zip(items_ids, self.repository.get_many(items_ids))):
                 if progress:
                     pi.show(i)
@@ -1482,21 +1488,21 @@ class ArchiveChecker:
                     if chunk_current == chunk_healthy:
                         logger.error('{}: {}: New missing file chunk detected (Byte {}-{}). '
                                      'Replacing with all-zero chunk.'.format(
-                                     archive_name, item.path, offset, offset + size))
+                                         archive_name, item.path, offset, offset + size))
                         self.error_found = chunks_replaced = True
                         chunk_id, size, csize, cdata = replacement_chunk(size)
                         add_reference(chunk_id, size, csize, cdata)
                     else:
                         logger.info('{}: {}: Previously missing file chunk is still missing (Byte {}-{}). It has a '
                                     'all-zero replacement chunk already.'.format(
-                                    archive_name, item.path, offset, offset + size))
+                                        archive_name, item.path, offset, offset + size))
                         chunk_id, size, csize = chunk_current
                         if chunk_id in self.chunks:
                             add_reference(chunk_id, size, csize)
                         else:
                             logger.warning('{}: {}: Missing all-zero replacement chunk detected (Byte {}-{}). '
                                            'Generating new replacement chunk.'.format(
-                                           archive_name, item.path, offset, offset + size))
+                                               archive_name, item.path, offset, offset + size))
                             self.error_found = chunks_replaced = True
                             chunk_id, size, csize, cdata = replacement_chunk(size)
                             add_reference(chunk_id, size, csize, cdata)
@@ -1584,7 +1590,8 @@ class ArchiveChecker:
                             if valid:
                                 yield Item(internal_dict=item)
                             else:
-                                report('Did not get expected metadata dict when unpacking item metadata (%s)' % reason, chunk_id, i)
+                                report('Did not get expected metadata dict when unpacking item metadata (%s)' %
+                                       reason, chunk_id, i)
                     except RobustUnpacker.UnpackerCrashed:
                         report('Unpacker crashed while unpacking item metadata, trying to resync...', chunk_id, i)
                         unpacker.resync()
@@ -1895,13 +1902,14 @@ class ArchiveRecreater:
         source_chunker_params = tuple(archive.metadata.get('chunker_params', []))
         target.recreate_rechunkify = self.rechunkify and source_chunker_params != target.chunker_params
         if target.recreate_rechunkify:
-            logger.debug('Rechunking archive from %s to %s', source_chunker_params or '(unknown)', target.chunker_params)
+            logger.debug('Rechunking archive from %s to %s', source_chunker_params or '(unknown)',
+                         target.chunker_params)
         return target
 
     def create_target_archive(self, name):
         target = Archive(self.repository, self.key, self.manifest, name, create=True,
-                          progress=self.progress, chunker_params=self.chunker_params, cache=self.cache,
-                          checkpoint_interval=self.checkpoint_interval)
+                         progress=self.progress, chunker_params=self.chunker_params, cache=self.cache,
+                         checkpoint_interval=self.checkpoint_interval)
         return target
 
     def open_archive(self, name, **kwargs):
