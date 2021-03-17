@@ -31,12 +31,11 @@ try:
 except ImportError:
     pass
 
-import borg
 from .. import xattr, helpers, platform
 from ..archive import Archive, ChunkBuffer, flags_noatime, flags_normal
 from ..archiver import Archiver, parse_storage_quota, PURE_PYTHON_MSGPACK_WARNING
 from ..cache import Cache, LocalCache
-from ..constants import *  # NOQA
+from ..constants import CACHE_TAG_CONTENTS, CACHE_TAG_NAME, CHUNK_MAX_EXP, ISO_FORMAT
 from ..crypto.low_level import bytes_to_long, num_aes_blocks
 from ..crypto.key import KeyfileKeyBase, RepoKey, KeyfileKey, Passphrase, TAMRequiredError
 from ..crypto.keymanager import RepoIdMismatch, NotABorgKeyFile
@@ -45,7 +44,6 @@ from ..helpers import Location, get_security_dir
 from ..helpers import Manifest, MandatoryFeatureUnsupported
 from ..helpers import EXIT_SUCCESS, EXIT_WARNING, EXIT_ERROR
 from ..helpers import bin_to_hex
-from ..helpers import MAX_S
 from ..helpers import msgpack
 from ..nanorst import RstToTextLazy, rst_to_terminal
 from ..patterns import IECommand, PatternMatcher, parse_pattern
@@ -55,8 +53,8 @@ from ..logger import setup_logging
 from ..remote import RemoteRepository, PathNotAllowed
 from ..repository import Repository
 from . import has_lchflags, has_llfuse
-from . import BaseTestCase, changedir, environment_variable, no_selinux
-from . import are_symlinks_supported, are_hardlinks_supported, are_fifos_supported, is_utime_fully_supported, is_birthtime_fully_supported
+from . import BaseTestCase, changedir, environment_variable, no_selinux, is_birthtime_fully_supported
+from . import are_symlinks_supported, are_hardlinks_supported, are_fifos_supported, is_utime_fully_supported
 from .platform import fakeroot_detected
 from .upgrader import make_attic_repo
 from . import key
@@ -69,12 +67,12 @@ def exec_cmd(*args, archiver=None, fork=False, exe=None, input=b'', binary_outpu
     if fork:
         try:
             if exe is None:
-                borg = (sys.executable, '-m', 'borg.archiver')
+                borg_exe = (sys.executable, '-m', 'borg.archiver')
             elif isinstance(exe, str):
-                borg = (exe, )
+                borg_exe = (exe, )
             elif not isinstance(exe, tuple):
                 raise ValueError('exe must be None, a tuple or a str')
-            output = subprocess.check_output(borg + args, stderr=subprocess.STDOUT, input=input)
+            output = subprocess.check_output(borg_exe + args, stderr=subprocess.STDOUT, input=input)
             ret = 0
         except subprocess.CalledProcessError as e:
             output = e.output
@@ -353,7 +351,8 @@ class ArchiverTestCaseBase(BaseTestCase):
             # same for newer ubuntu and centos.
             # if this is supported just on specific platform, platform should be checked first,
             # so that the test setup for all tests using it does not fail here always for others.
-            # xattr.setxattr(os.path.join(self.input_path, 'link1'), 'user.foo_symlink', b'bar_symlink', follow_symlinks=False)
+            # xattr.setxattr(os.path.join(self.input_path, 'link1'), 'user.foo_symlink', b'bar_symlink',
+            #                follow_symlinks=False)
         # FIFO node
         if are_fifos_supported():
             os.mkfifo(os.path.join(self.input_path, 'fifo1'))
@@ -387,7 +386,8 @@ class ArchiverTestCase(ArchiverTestCaseBase):
     def test_basic_functionality(self):
         have_root = self.create_test_files()
         # fork required to test show-rc output
-        output = self.cmd('init', '--encryption=repokey', '--show-version', '--show-rc', self.repository_location, fork=True)
+        output = self.cmd('init', '--encryption=repokey', '--show-version',
+                          '--show-rc', self.repository_location, fork=True)
         self.assert_in('borgbackup version', output)
         self.assert_in('terminating with success status, rc 0', output)
         self.cmd('create', '--exclude-nodump', self.repository_location + '::test', 'input')
@@ -534,7 +534,8 @@ class ArchiverTestCase(ArchiverTestCaseBase):
             assert sto.st_atime_ns == atime * 1e9
 
     @pytest.mark.skipif(not is_utime_fully_supported(), reason='cannot properly setup and execute test without utime')
-    @pytest.mark.skipif(not is_birthtime_fully_supported(), reason='cannot properly setup and execute test without birthtime')
+    @pytest.mark.skipif(not is_birthtime_fully_supported(),
+                        reason='cannot properly setup and execute test without birthtime')
     def test_birthtime(self):
         self.create_test_files()
         birthtime, mtime, atime = 946598400, 946684800, 946771200
@@ -550,7 +551,8 @@ class ArchiverTestCase(ArchiverTestCaseBase):
         assert sti.st_mtime_ns == sto.st_mtime_ns == mtime * 1e9
 
     @pytest.mark.skipif(not is_utime_fully_supported(), reason='cannot properly setup and execute test without utime')
-    @pytest.mark.skipif(not is_birthtime_fully_supported(), reason='cannot properly setup and execute test without birthtime')
+    @pytest.mark.skipif(not is_birthtime_fully_supported(),
+                        reason='cannot properly setup and execute test without birthtime')
     def test_nobirthtime(self):
         self.create_test_files()
         birthtime, mtime, atime = 946598400, 946684800, 946771200
@@ -820,7 +822,8 @@ class ArchiverTestCase(ArchiverTestCaseBase):
         self._extract_hardlinks_setup()
         mountpoint = os.path.join(self.tmpdir, 'mountpoint')
         # we need to get rid of permissions checking because fakeroot causes issues with it.
-        # On all platforms, borg defaults to "default_permissions" and we need to get rid of it via "ignore_permissions".
+        # On all platforms, borg defaults to "default_permissions" and we need to get rid of it via
+        # "ignore_permissions".
         # On macOS (darwin), we additionally need "defer_permissions" to switch off the checks in osxfuse.
         if sys.platform == 'darwin':
             ignore_perms = ['-o', 'ignore_permissions,defer_permissions']
@@ -1242,7 +1245,8 @@ class ArchiverTestCase(ArchiverTestCaseBase):
 
     def test_exclude_tagged(self):
         self._create_test_tagged()
-        self.cmd('create', '--exclude-if-present', '.NOBACKUP', '--exclude-if-present', '00-NOBACKUP', self.repository_location + '::test', 'input')
+        self.cmd('create', '--exclude-if-present', '.NOBACKUP', '--exclude-if-present', '00-NOBACKUP',
+                 self.repository_location + '::test', 'input')
         self._assert_test_tagged()
 
     def test_recreate_exclude_tagged(self):
@@ -1280,7 +1284,8 @@ class ArchiverTestCase(ArchiverTestCaseBase):
 
     def test_exclude_keep_tagged_deprecation(self):
         self.cmd('init', '--encryption=repokey', self.repository_location)
-        output_warn = self.cmd('create', '--exclude-caches', '--keep-tag-files', self.repository_location + '::test', src_dir)
+        output_warn = self.cmd('create', '--exclude-caches', '--keep-tag-files',
+                               self.repository_location + '::test', src_dir)
         self.assert_in('--keep-tag-files" has been deprecated.', output_warn)
 
     def test_exclude_keep_tagged(self):
@@ -1351,11 +1356,13 @@ class ArchiverTestCase(ArchiverTestCaseBase):
             input_abspath = os.path.abspath('input/file')
             with patch.object(xattr, 'setxattr', patched_setxattr_E2BIG):
                 out = self.cmd('extract', self.repository_location + '::test', exit_code=EXIT_WARNING)
-                assert out == (input_abspath + ': when setting extended attribute user.attribute: too big for this filesystem\n')
+                assert out == (input_abspath + ': when setting extended attribute user.attribute: too big for this '
+                               'filesystem\n')
             os.remove(input_abspath)
             with patch.object(xattr, 'setxattr', patched_setxattr_ENOTSUP):
                 out = self.cmd('extract', self.repository_location + '::test', exit_code=EXIT_WARNING)
-                assert out == (input_abspath + ': when setting extended attribute user.attribute: xattrs not supported on this filesystem\n')
+                assert out == (input_abspath + ': when setting extended attribute user.attribute: xattrs not supported '
+                               'on this filesystem\n')
             os.remove(input_abspath)
             with patch.object(xattr, 'setxattr', patched_setxattr_EACCES):
                 out = self.cmd('extract', self.repository_location + '::test', exit_code=EXIT_WARNING)
@@ -1459,7 +1466,8 @@ class ArchiverTestCase(ArchiverTestCaseBase):
         cache = info_repo['cache']
         stats = cache['stats']
         assert all(isinstance(o, int) for o in stats.values())
-        assert all(key in stats for key in ('total_chunks', 'total_csize', 'total_size', 'total_unique_chunks', 'unique_csize', 'unique_size'))
+        assert all(key in stats for key in ('total_chunks', 'total_csize', 'total_size', 'total_unique_chunks',
+                                            'unique_csize', 'unique_size'))
 
         info_archive = json.loads(self.cmd('info', '--json', self.repository_location + '::test'))
         assert info_repo['repository'] == info_archive['repository']
@@ -1888,9 +1896,11 @@ class ArchiverTestCase(ArchiverTestCaseBase):
         time.sleep(1)  # file2 must have newer timestamps than file1
         self.create_regular_file('file2', size=10)
         self.cmd('init', '--encryption=repokey', self.repository_location)
-        output = self.cmd('create', '--list', '--files-cache=rechunk,ctime', self.repository_location + '::test1', 'input')
+        output = self.cmd('create', '--list', '--files-cache=rechunk,ctime', self.repository_location + '::test1',
+                          'input')
         # no changes here, but this mode rechunks unconditionally
-        output = self.cmd('create', '--list', '--files-cache=rechunk,ctime', self.repository_location + '::test2', 'input')
+        output = self.cmd('create', '--list', '--files-cache=rechunk,ctime', self.repository_location + '::test2',
+                          'input')
         self.assert_in("A input/file1", output)
 
     def test_file_status_excluded(self):
@@ -1909,7 +1919,8 @@ class ArchiverTestCase(ArchiverTestCaseBase):
         if has_lchflags:
             self.assert_in("x input/file3", output)
         # should find second file as excluded
-        output = self.cmd('create', '--list', '--exclude-nodump', self.repository_location + '::test1', 'input', '--exclude', '*/file2')
+        output = self.cmd('create', '--list', '--exclude-nodump', self.repository_location + '::test1', 'input',
+                          '--exclude', '*/file2')
         self.assert_in("U input/file1", output)
         self.assert_in("x input/file2", output)
         if has_lchflags:
@@ -2051,7 +2062,8 @@ class ArchiverTestCase(ArchiverTestCaseBase):
         self.cmd('create', self.repository_location + '::2015-08-12-20:00-foo', src_dir)
         self.cmd('create', self.repository_location + '::2015-08-12-10:00-bar', src_dir)
         self.cmd('create', self.repository_location + '::2015-08-12-20:00-bar', src_dir)
-        output = self.cmd('prune', '--list', '--dry-run', self.repository_location, '--keep-daily=2', '--glob-archives=2015-*-foo')
+        output = self.cmd('prune', '--list', '--dry-run', self.repository_location, '--keep-daily=2',
+                          '--glob-archives=2015-*-foo')
         self.assert_in('Keeping archive: 2015-08-12-20:00-foo', output)
         self.assert_in('Would prune:     2015-08-12-10:00-foo', output)
         output = self.cmd('list', self.repository_location)
@@ -2083,7 +2095,8 @@ class ArchiverTestCase(ArchiverTestCaseBase):
         output_warn = self.cmd('list', '--list-format', '-', test_archive)
         self.assert_in('--list-format" has been deprecated.', output_warn)
         output_1 = self.cmd('list', test_archive)
-        output_2 = self.cmd('list', '--format', '{mode} {user:6} {group:6} {size:8d} {mtime} {path}{extra}{NEWLINE}', test_archive)
+        output_2 = self.cmd('list', '--format', '{mode} {user:6} {group:6} {size:8d} {mtime} {path}{extra}{NEWLINE}',
+                            test_archive)
         output_3 = self.cmd('list', '--format', '{mtime:%s} {path}{NL}', test_archive)
         self.assertEqual(output_1, output_2)
         self.assertNotEqual(output_1, output_3)
@@ -2968,7 +2981,8 @@ id: 2 / e29442 3506da 4e1ea7 / 25f62a 5a3d41 - 02
     def test_debug_refcount_obj(self):
         self.cmd('init', '--encryption=repokey', self.repository_location)
         output = self.cmd('debug', 'refcount-obj', self.repository_location, '0' * 64).strip()
-        assert output == 'object 0000000000000000000000000000000000000000000000000000000000000000 not found [info from chunks cache].'
+        assert output == 'object 0000000000000000000000000000000000000000000000000000000000000000 ' \
+            'not found [info from chunks cache].'
 
         create_json = json.loads(self.cmd('create', '--json', self.repository_location + '::test', 'input'))
         archive_id = create_json['archive']['id']
@@ -3055,7 +3069,8 @@ id: 2 / e29442 3506da 4e1ea7 / 25f62a 5a3d41 - 02
         os.unlink('input/flagfile')
         self.cmd('init', '--encryption=repokey', self.repository_location)
         self.cmd('create', self.repository_location + '::test', 'input')
-        list = self.cmd('export-tar', self.repository_location + '::test', 'simple.tar', '--strip-components=1', '--list')
+        list = self.cmd('export-tar', self.repository_location + '::test', 'simple.tar', '--strip-components=1',
+                        '--list')
         # --list's path are those before processing with --strip-components
         assert 'input/file1\n' in list
         assert 'input/dir2\n' in list
@@ -3486,7 +3501,8 @@ class RemoteArchiverTestCase(ArchiverTestCase):
         with patch.object(RemoteRepository, 'extra_test_args', ['--restrict-to-path', path_prefix]):
             self.cmd('init', '--encryption=repokey', self.repository_location + '_2')
         # restrict to repo directory's parent directory and another directory:
-        with patch.object(RemoteRepository, 'extra_test_args', ['--restrict-to-path', '/foo', '--restrict-to-path', path_prefix]):
+        with patch.object(RemoteRepository, 'extra_test_args',
+                          ['--restrict-to-path', '/foo', '--restrict-to-path', path_prefix]):
             self.cmd('init', '--encryption=repokey', self.repository_location + '_3')
 
     def test_remote_repo_restrict_to_repository(self):
@@ -3765,9 +3781,9 @@ class DiffArchiverTestCase(ArchiverTestCaseBase):
 
                 # Symlink replacing or being replaced
                 assert any(chg['type'] == 'mode' and chg['new_mode'].startswith('l') for chg in
-                    get_changes('input/dir_replaced_with_link', joutput))
+                           get_changes('input/dir_replaced_with_link', joutput))
                 assert any(chg['type'] == 'mode' and chg['old_mode'].startswith('l') for chg in
-                    get_changes('input/link_replaced_by_file', joutput))
+                           get_changes('input/link_replaced_by_file', joutput))
 
                 # Symlink target removed. Should not affect the symlink at all.
                 assert not any(get_changes('input/link_target_removed', joutput))
