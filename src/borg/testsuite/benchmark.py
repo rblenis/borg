@@ -10,7 +10,8 @@ import os
 
 import pytest
 
-from .archiver import changedir, cmd
+from .archiver import changedir
+from .archiver import cmd   # noqa: F401 - testfixture
 
 
 @pytest.fixture
@@ -26,7 +27,7 @@ def repo_url(request, tmpdir, monkeypatch):
 
 
 @pytest.fixture(params=["none", "repokey"])
-def repo(request, cmd, repo_url):
+def repo(request, cmd, repo_url):   # noqa: F811 - cmd is a testfixture, not redefining it
     cmd('init', '--encryption', request.param, repo_url)
     return repo_url
 
@@ -53,49 +54,49 @@ def testdata(request, tmpdir_factory):
 
 
 @pytest.fixture(params=['none', 'lz4'])
-def archive(request, cmd, repo, testdata):
+def archive(request, cmd, repo, testdata):  # noqa: F811 - cmd is a testfixture, not redefining it
     archive_url = repo + '::test'
     cmd('create', '--compression', request.param, archive_url, testdata)
     return archive_url
 
 
-def test_create_none(benchmark, cmd, repo, testdata):
+def test_create_none(benchmark, cmd, repo, testdata):   # noqa: F811 - cmd is a testfixture, not redefining it
     result, out = benchmark.pedantic(cmd, ('create', '--compression', 'none', repo + '::test', testdata))
     assert result == 0
 
 
-def test_create_lz4(benchmark, cmd, repo, testdata):
+def test_create_lz4(benchmark, cmd, repo, testdata):    # noqa: F811 - cmd is a testfixture, not redefining it
     result, out = benchmark.pedantic(cmd, ('create', '--compression', 'lz4', repo + '::test', testdata))
     assert result == 0
 
 
-def test_extract(benchmark, cmd, archive, tmpdir):
+def test_extract(benchmark, cmd, archive, tmpdir):  # noqa: F811 - cmd is a testfixture, not redefining it
     with changedir(str(tmpdir)):
         result, out = benchmark.pedantic(cmd, ('extract', archive))
     assert result == 0
 
 
-def test_delete(benchmark, cmd, archive):
+def test_delete(benchmark, cmd, archive):   # noqa: F811 - cmd is a testfixture, not redefining it
     result, out = benchmark.pedantic(cmd, ('delete', archive))
     assert result == 0
 
 
-def test_list(benchmark, cmd, archive):
+def test_list(benchmark, cmd, archive):     # noqa: F811 - cmd is a testfixture, not redefining it
     result, out = benchmark(cmd, 'list', archive)
     assert result == 0
 
 
-def test_info(benchmark, cmd, archive):
+def test_info(benchmark, cmd, archive):     # noqa: F811 - cmd is a testfixture, not redefining it
     result, out = benchmark(cmd, 'info', archive)
     assert result == 0
 
 
-def test_check(benchmark, cmd, archive):
+def test_check(benchmark, cmd, archive):    # noqa: F811 - cmd is a testfixture, not redefining it
     repo = archive.split('::')[0]
     result, out = benchmark(cmd, 'check', repo)
     assert result == 0
 
 
-def test_help(benchmark, cmd):
+def test_help(benchmark, cmd):              # noqa: F811 - cmd is a testfixture, not redefining it
     result, out = benchmark(cmd, 'help')
     assert result == 0
