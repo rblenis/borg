@@ -13,7 +13,7 @@ from ..logger import create_logger
 
 logger = create_logger()
 
-from ..constants import *  # NOQA
+from ..constants import PBKDF2_ITERATIONS
 from ..compress import Compressor
 from ..helpers import StableDict
 from ..helpers import Error, IntegrityError
@@ -27,7 +27,7 @@ from ..item import Key, EncryptedKey
 from ..platform import SaveFile
 
 from .nonces import NonceManager
-from .low_level import AES, bytes_to_long, long_to_bytes, bytes_to_int, num_cipher_blocks, hmac_sha256, blake2b_256, hkdf_hmac_sha512
+from .low_level import AES, bytes_to_int, num_cipher_blocks, hmac_sha256, blake2b_256, hkdf_hmac_sha512
 from .low_level import AES256_CTR_HMAC_SHA256, AES256_CTR_BLAKE2b
 
 
@@ -373,7 +373,7 @@ class AESKeyBase(KeyBase):
 
     def decrypt(self, id, data, decompress=True):
         if not (data[0] == self.TYPE or
-            data[0] == PassphraseKey.TYPE and isinstance(self, RepoKey)):
+                data[0] == PassphraseKey.TYPE and isinstance(self, RepoKey)):
             id_str = bin_to_hex(id) if id is not None else '(unknown)'
             raise IntegrityError('Chunk %s: Invalid encryption envelope' % id_str)
         try:
@@ -488,10 +488,9 @@ class Passphrase(str):
                 passphrase.encode('ascii')
             except UnicodeEncodeError:
                 print('Your passphrase (UTF-8 encoding in hex): %s' %
-                      bin_to_hex(passphrase.encode('utf-8')),
-                      file=sys.stderr)
-                print('As you have a non-ASCII passphrase, it is recommended to keep the UTF-8 encoding in hex together with the passphrase at a safe place.',
-                      file=sys.stderr)
+                      bin_to_hex(passphrase.encode('utf-8')), file=sys.stderr)
+                print('As you have a non-ASCII passphrase, it is recommended to keep the UTF-8 encoding in hex '
+                      'together with the passphrase at a safe place.', file=sys.stderr)
 
     @classmethod
     def new(cls, allow_empty=False):
