@@ -373,8 +373,8 @@ class Repository:
 
     def get_index_transaction_id(self):
         indices = sorted(int(fn[6:]) for fn in os.listdir(self.path)
-                         if (fn.startswith('index.') and fn[6:].isdigit() and
-                             os.stat(os.path.join(self.path, fn)).st_size != 0))
+                         if (fn.startswith('index.') and fn[6:].isdigit()
+                             and os.stat(os.path.join(self.path, fn)).st_size != 0))
         if indices:
             return indices[-1]
         else:
