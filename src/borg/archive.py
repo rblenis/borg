@@ -1,6 +1,5 @@
 import json
 import os
-import socket
 import stat
 import sys
 import time
@@ -13,7 +12,7 @@ from io import BytesIO
 from itertools import groupby, zip_longest
 from shutil import get_terminal_size
 
-from .platformflags import is_win32, is_linux, is_freebsd, is_darwin
+from .platformflags import is_win32
 from .logger import create_logger
 
 logger = create_logger()
@@ -23,7 +22,10 @@ from .chunker import get_chunker, Chunk
 from .cache import ChunkListEntry
 from .crypto.key import key_factory
 from .compress import Compressor, CompressionSpec
-from .constants import *  # NOQA
+from .constants import ARCHIVE_KEYS, ITEMS_CHUNKER_PARAMS, CHUNKER_PARAMS, MAX_DATA_SIZE, ISO_FORMAT, EXIT_WARNING
+from .constants import CH_ALLOC, CH_BUZHASH, CH_DATA, CH_HOLE, REQUIRED_ARCHIVE_KEYS, REQUIRED_ITEM_KEYS, DASHES
+from .constants import CACHE_TAG_NAME, CACHE_TAG_CONTENTS, zeros
+from .constants import ITEM_KEYS    # noqa: F401 - needed by testsuite/archive.py
 from .crypto.low_level import IntegrityError as IntegrityErrorBase
 from .hashindex import ChunkIndex, ChunkIndexEntry, CacheSynchronizer
 from .helpers import Manifest
@@ -31,7 +33,7 @@ from .helpers import hardlinkable
 from .helpers import ChunkIteratorFileWrapper, open_item
 from .helpers import Error, IntegrityError, set_ec
 from .platform import uid2user, user2uid, gid2group, group2gid
-from .helpers import parse_timestamp, to_localtime
+from .helpers import parse_timestamp
 from .helpers import OutputTimestamp, format_timedelta, format_file_size, file_status, FileSize
 from .helpers import safe_encode, safe_decode, make_path_safe, remove_surrogates
 from .helpers import StableDict
@@ -395,7 +397,7 @@ class Archive:
         """Archive {} already exists"""
 
     class IncompatibleFilesystemEncodingError(Error):
-        """Failed to encode filename "{}" into file system encoding "{}". Consider configuring the LANG environment variable."""
+        """Failed to encode filename "{}" into file system encoding "{}". Consider configuring the LANG environment variable."""    # noqa: E501
 
     def __init__(self, repository, key, manifest, name, cache=None, create=False,
                  checkpoint_interval=1800, numeric_ids=False, noatime=False, noctime=False,
@@ -421,7 +423,8 @@ class Archive:
         self.noflags = noflags
         self.noacls = noacls
         self.noxattrs = noxattrs
-        assert (start is None) == (start_monotonic is None), 'Logic error: if start is given, start_monotonic must be given as well and vice versa.'
+        assert (start is None) == (start_monotonic is None), \
+            'Logic error: if start is given, start_monotonic must be given as well and vice versa.'
         if start is None:
             start = datetime.utcnow()
             start_monotonic = time.monotonic()
@@ -537,7 +540,7 @@ Utilization of max. archive size: {csize_max:.0%}
             end=OutputTimestamp(self.end.replace(tzinfo=timezone.utc)),
             csize_max=self.cache.chunks[self.id].csize / MAX_DATA_SIZE,
             location=self.repository._location.canonical_path()
-)
+        )
 
     def __repr__(self):
         return 'Archive(%r)' % self.name
@@ -874,8 +877,8 @@ Utilization of max. archive size: {csize_max:.0%}
             if not self.noacls:
                 acl_set(path, item, self.numeric_ids, fd=fd)
             if not self.noxattrs:
-                # chown removes Linux capabilities, so set the extended attributes at the end, after chown, since they include
-                # the Linux capabilities in the "security.capability" attribute.
+                # chown removes Linux capabilities, so set the extended attributes at the end, after chown, since they
+                # include the Linux capabilities in the "security.capability" attribute.
                 warning = xattr.set_all(fd or path, item.get('xattrs', {}), follow_symlinks=False)
                 if warning:
                     set_ec(EXIT_WARNING)
@@ -934,7 +937,8 @@ Utilization of max. archive size: {csize_max:.0%}
         try:
             unpacker = msgpack.Unpacker(use_list=False)
             items_ids = self.metadata.items
-            pi = ProgressIndicatorPercent(total=len(items_ids), msg="Decrementing references %3.0f%%", msgid='archive.delete')
+            pi = ProgressIndicatorPercent(total=len(items_ids),
+                                          msg="Decrementing references %3.0f%%", msgid='archive.delete')
             for (i, (items_id, data)) in enumerate(zip(items_ids, self.repository.get_many(items_ids))):
                 if progress:
                     pi.show(i)
@@ -1169,7 +1173,7 @@ class ChunksProcessor:
     def maybe_checkpoint(self, item, from_chunk, part_number, forced=False):
         sig_int_triggered = sig_int and sig_int.action_triggered()
         if forced or sig_int_triggered or \
-            self.checkpoint_interval and time.monotonic() - self.last_checkpoint > self.checkpoint_interval:
+                self.checkpoint_interval and time.monotonic() - self.last_checkpoint > self.checkpoint_interval:
             if sig_int_triggered:
                 logger.info('checkpoint requested: starting checkpoint creation...')
             from_chunk, part_number = self.write_part_file(item, from_chunk, part_number)
@@ -1353,7 +1357,8 @@ class FilesystemObjectProcessors:
                         # Make sure all ids are available
                         for id_ in ids:
                             if not cache.seen_chunk(id_):
-                                status = 'M'  # cache said it is unmodified, but we lost a chunk: process file like modified
+                                # cache said it is unmodified, but we lost a chunk: process file like modified
+                                status = 'M'
                                 break
                         else:
                             chunks = [cache.chunk_incref(id_, self.stats) for id_ in ids]
@@ -1368,7 +1373,8 @@ class FilesystemObjectProcessors:
                         item.chunks = chunks
                     else:
                         with backup_io('read'):
-                            self.process_file_chunks(item, cache, self.stats, self.show_progress, backup_io_iter(self.chunker.chunkify(None, fd)))
+                            self.process_file_chunks(item, cache, self.stats, self.show_progress,
+                                                     backup_io_iter(self.chunker.chunkify(None, fd)))
                         if is_win32:
                             changed_while_backup = False  # TODO
                         else:
@@ -1846,7 +1852,8 @@ class ArchiveChecker:
                             if valid:
                                 yield Item(internal_dict=item)
                             else:
-                                report('Did not get expected metadata dict when unpacking item metadata (%s)' % reason, chunk_id, i)
+                                report('Did not get expected metadata dict when unpacking item metadata (%s)' %
+                                       reason, chunk_id, i)
                     except msgpack.UnpackException:
                         report('Unpacker crashed while unpacking item metadata, trying to resync...', chunk_id, i)
                         unpacker.resync()
@@ -1992,10 +1999,8 @@ class ArchiveRecreater:
         hardlink_masters = {} if target_is_subset else None
 
         def item_is_hardlink_master(item):
-            return (target_is_subset and
-                    hardlinkable(item.mode) and
-                    item.get('hardlink_master', True) and
-                    'source' not in item)
+            return (target_is_subset and hardlinkable(item.mode) and item.get('hardlink_master', True)
+                    and 'source' not in item)
 
         for item in archive.iter_items():
             if not matcher.match(item.path):
@@ -2162,7 +2167,8 @@ class ArchiveRecreater:
             source_chunker_params = (CH_BUZHASH, ) + source_chunker_params
         target.recreate_rechunkify = self.rechunkify and source_chunker_params != target.chunker_params
         if target.recreate_rechunkify:
-            logger.debug('Rechunking archive from %s to %s', source_chunker_params or '(unknown)', target.chunker_params)
+            logger.debug('Rechunking archive from %s to %s',
+                         source_chunker_params or '(unknown)', target.chunker_params)
         target.process_file_chunks = ChunksProcessor(
             cache=self.cache, key=self.key,
             add_item=target.add_item, write_checkpoint=target.write_checkpoint,
@@ -2172,8 +2178,8 @@ class ArchiveRecreater:
 
     def create_target_archive(self, name):
         target = Archive(self.repository, self.key, self.manifest, name, create=True,
-                          progress=self.progress, chunker_params=self.chunker_params, cache=self.cache,
-                          checkpoint_interval=self.checkpoint_interval)
+                         progress=self.progress, chunker_params=self.chunker_params, cache=self.cache,
+                         checkpoint_interval=self.checkpoint_interval)
         return target
 
     def open_archive(self, name, **kwargs):
