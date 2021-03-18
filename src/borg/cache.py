@@ -121,8 +121,7 @@ class SecurityManager:
         repository_location = self.repository._location.canonical_path()
         if previous_location and previous_location != repository_location:
             msg = ("Warning: The repository at location {} was previously located at {}\n".format(
-                repository_location, previous_location) +
-                "Do you want to continue? [yN] ")
+                repository_location, previous_location) + "Do you want to continue? [yN] ")
             if not yes(msg, false_msg="Aborting.", invalid_msg="Invalid answer, aborting.",
                        retry=False, env_var_override='BORG_RELOCATED_REPO_ACCESS_IS_OK'):
                 raise Cache.RepositoryAccessAborted()
@@ -188,11 +187,11 @@ class SecurityManager:
         # warn_if_unencrypted=False is only used for initializing a new repository.
         # Thus, avoiding asking about a repository that's currently initializing.
         if not key.logically_encrypted and not self.known():
-            msg = ("Warning: Attempting to access a previously unknown unencrypted repository!\n" +
+            msg = ("Warning: Attempting to access a previously unknown unencrypted repository!\n"
                    "Do you want to continue? [yN] ")
-            allow_access = not warn_if_unencrypted or yes(msg, false_msg="Aborting.",
-                invalid_msg="Invalid answer, aborting.",
-                retry=False, env_var_override='BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK')
+            allow_access = not warn_if_unencrypted or \
+                yes(msg, false_msg="Aborting.", invalid_msg="Invalid answer, aborting.",
+                    retry=False, env_var_override='BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK')
             if allow_access:
                 if warn_if_unencrypted:
                     logger.debug('security: remembering unknown unencrypted repository (explicitly allowed)')
@@ -277,7 +276,8 @@ class CacheConfig:
         self.timestamp = self._config.get('cache', 'timestamp', fallback=None)
         self.key_type = self._config.get('cache', 'key_type', fallback=None)
         self.ignored_features = set(parse_stringified_list(self._config.get('cache', 'ignored_features', fallback='')))
-        self.mandatory_features = set(parse_stringified_list(self._config.get('cache', 'mandatory_features', fallback='')))
+        self.mandatory_features = set(parse_stringified_list(
+            self._config.get('cache', 'mandatory_features', fallback='')))
         try:
             self.integrity = dict(self._config.items('integrity'))
             if self._config.get('cache', 'manifest') != self.integrity.pop('manifest'):
@@ -340,7 +340,7 @@ class Cache:
         """Cache is newer than repository - do you have multiple, independently updated repos with same ID?"""
 
     class RepositoryReplay(Error):
-        """Cache, or information obtained from the security directory is newer than repository - this is either an attack or unsafe (multiple repos with same ID)"""
+        """Cache, or information obtained from the security directory is newer than repository - this is either an attack or unsafe (multiple repos with same ID)"""    # noqa: E501
 
     class CacheInitAbortedError(Error):
         """Cache initialization aborted"""
@@ -612,7 +612,8 @@ class LocalCache(CacheStatsMixin):
                         msgpack.pack((path_hash, entry), fd)
                         entry_count += 1
             files_cache_logger.debug("FILES-CACHE-KILL: removed all old entries with age >= TTL [%d]", ttl)
-            files_cache_logger.debug("FILES-CACHE-KILL: removed all current entries with newest cmtime %d", self._newest_cmtime)
+            files_cache_logger.debug("FILES-CACHE-KILL: removed all current entries with newest cmtime %d",
+                                     self._newest_cmtime)
             files_cache_logger.debug("FILES-CACHE-SAVE: finished, %d remaining entries saved.", entry_count)
             self.cache_config.integrity[files_cache_name()] = fd.integrity_data
         pi.output('Saving chunks cache')
@@ -676,7 +677,7 @@ class LocalCache(CacheStatsMixin):
                 # filenames with 64 hex digits == 256bit,
                 # or compact indices which are 64 hex digits + ".compact"
                 return set(unhexlify(fn) for fn in fns if len(fn) == 64) | \
-                       set(unhexlify(fn[:64]) for fn in fns if len(fn) == 72 and fn.endswith('.compact'))
+                    set(unhexlify(fn[:64]) for fn in fns if len(fn) == 72 and fn.endswith('.compact'))
             else:
                 return set()
 
@@ -812,8 +813,8 @@ class LocalCache(CacheStatsMixin):
             cached_ids = cached_archives()
             archive_ids = repo_archives()
             logger.info('Archives: %d, w/ cached Idx: %d, w/ outdated Idx: %d, w/o cached Idx: %d.',
-                len(archive_ids), len(cached_ids),
-                len(cached_ids - archive_ids), len(archive_ids - cached_ids))
+                        len(archive_ids), len(cached_ids),
+                        len(cached_ids - archive_ids), len(archive_ids - cached_ids))
             # deallocates old hashindex, creates empty hashindex:
             chunk_idx.clear()
             cleanup_outdated(cached_ids - archive_ids)
@@ -881,8 +882,10 @@ class LocalCache(CacheStatsMixin):
         self.begin_txn()
         with cache_if_remote(self.repository, decrypted_cache=self.key) as decrypted_repository:
             legacy_cleanup()
-            # TEMPORARY HACK: to avoid archive index caching, create a FILE named ~/.cache/borg/REPOID/chunks.archive.d -
-            # this is only recommended if you have a fast, low latency connection to your repo (e.g. if repo is local disk)
+            # TEMPORARY HACK: to avoid archive index caching, create a FILE named
+            #    ~/.cache/borg/REPOID/chunks.archive.d -
+            # this is only recommended if you have a fast, low latency connection
+            # to your repo (e.g. if repo is local disk)
             self.do_cache = os.path.isdir(archive_path)
             self.chunks = create_master_idx(self.chunks)
 
