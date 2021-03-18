@@ -42,7 +42,9 @@ try:
     from .archive import FilesystemObjectProcessors, MetadataCollector, ChunksProcessor
     from .archive import has_link
     from .cache import Cache, assert_secure, SecurityManager
-    from .constants import *  # NOQA
+    from .constants import CHUNKER_PARAMS, DASHES, DEFAULT_FILES_CACHE_MODE, DEFAULT_SEGMENTS_PER_DIR
+    from .constants import DEFAULT_FILES_CACHE_MODE_UI, MAX_SEGMENT_SIZE_LIMIT, STDIN_MODE_DEFAULT
+    from .constants import UMASK_DEFAULT, zeros
     from .compress import CompressionSpec
     from .crypto.key import key_creator, key_argument_names, tam_required_file, tam_required, RepoKey, PassphraseKey
     from .crypto.keymanager import KeyManager
@@ -66,7 +68,6 @@ try:
     from .helpers import ErrorIgnoringTextIOWrapper
     from .helpers import ProgressIndicatorPercent
     from .helpers import basic_json_data, json_print
-    from .helpers import replace_placeholders
     from .helpers import ChunkIteratorFileWrapper
     from .helpers import popen_with_error_handling, prepare_subprocess_env
     from .helpers import dash_open
@@ -76,9 +77,8 @@ try:
     from .helpers import sig_int
     from .helpers import iter_separated
     from .nanorst import rst_to_terminal
-    from .patterns import ArgparsePatternAction, ArgparseExcludeFileAction, ArgparsePatternFileAction, parse_exclude_pattern
-    from .patterns import PatternMatcher
-    from .item import Item
+    from .patterns import ArgparsePatternAction, ArgparseExcludeFileAction, ArgparsePatternFileAction
+    from .patterns import parse_exclude_pattern, PatternMatcher
     from .platform import get_flags, get_process_id, SyncFile
     from .platform import uid2user, gid2group
     from .remote import RepositoryServer, RemoteRepository, cache_if_remote
@@ -124,7 +124,7 @@ def with_repository(fake=False, invert_fake=False, create=False, lock=True,
     :param cache: open cache, pass it as keyword argument (implies manifest)
     :param secure: do assert_secure after loading manifest
     :param compatibility: mandatory if not create and (manifest or cache), specifies mandatory feature categories to check
-    """
+    """     # noqa: E501
 
     if not create and (manifest or cache):
         if compatibility is None:
@@ -133,7 +133,8 @@ def with_repository(fake=False, invert_fake=False, create=False, lock=True,
             raise AssertionError("with_repository decorator compatibility argument must be of type tuple")
     else:
         if compatibility is not None:
-            raise AssertionError("with_repository called with compatibility argument but would not check" + repr(compatibility))
+            raise AssertionError("with_repository called with compatibility argument but would not check"
+                                 + repr(compatibility))
         if create:
             compatibility = Manifest.NO_OPERATION_CHECK
 
@@ -290,15 +291,16 @@ class Archiver:
                 'If you want to use these older versions, you can disable the check by running:\n'
                 'borg upgrade --disable-tam %s\n'
                 '\n'
-                'See https://borgbackup.readthedocs.io/en/stable/changes.html#pre-1-0-9-manifest-spoofing-vulnerability '
-                'for details about the security implications.', shlex.quote(path))
+                'See https://borgbackup.readthedocs.io/en/stable/changes.html#pre-1-0-9-manifest-spoofing-vulnerability'
+                ' for details about the security implications.', shlex.quote(path))
 
         if key.NAME != 'plaintext':
             if 'repokey' in key.NAME:
                 logger.warning(
                     '\n'
                     'IMPORTANT: you will need both KEY AND PASSPHRASE to access this repo!\n'
-                    'The key is included in the repository config, but should be backed up in case the repository gets corrupted.\n'
+                    'The key is included in the repository config, but should be backed up in case the repository '
+                    'gets corrupted.\n'
                     'Use "borg key export" to export the key, optionally in printable format.\n'
                     'Write down the passphrase. Store both at safe place(s).\n')
             else:
@@ -529,7 +531,8 @@ class Archiver:
                         except (FileNotFoundError, PermissionError) as e:
                             self.print_error('Failed to execute command: %s', e)
                             return self.exit_code
-                        status = fso.process_pipe(path=path, cache=cache, fd=proc.stdout, mode=mode, user=user, group=group)
+                        status = fso.process_pipe(path=path, cache=cache, fd=proc.stdout,
+                                                  mode=mode, user=user, group=group)
                         rc = proc.wait()
                         if rc != 0:
                             self.print_error('Command %r exited with status %d', args.paths[0], rc)
@@ -578,7 +581,8 @@ class Archiver:
                         group = args.stdin_group
                         if not dry_run:
                             try:
-                                status = fso.process_pipe(path=path, cache=cache, fd=sys.stdin.buffer, mode=mode, user=user, group=group)
+                                status = fso.process_pipe(path=path, cache=cache, fd=sys.stdin.buffer,
+                                                          mode=mode, user=user, group=group)
                             except BackupOSError as e:
                                 status = 'E'
                                 self.print_warning('%s: %s', path, e)
@@ -692,7 +696,7 @@ class Archiver:
                     special = is_special(st_target.st_mode)
                 if special:
                     return fso.process_file(path=path, parent_fd=parent_fd, name=name, st=st_target,
-                                              cache=cache, flags=flags_special_follow)
+                                            cache=cache, flags=flags_special_follow)
                 else:
                     return fso.process_symlink(path=path, parent_fd=parent_fd, name=name, st=st)
         elif stat.S_ISFIFO(st.st_mode):
@@ -795,10 +799,11 @@ class Archiver:
                                     for tag_name in tag_names:
                                         tag_path = os.path.join(path, tag_name)
                                         self._rec_walk(
-                                                path=tag_path, parent_fd=child_fd, name=tag_name, fso=fso, cache=cache,
-                                                matcher=matcher, exclude_caches=exclude_caches, exclude_if_present=exclude_if_present,
-                                                keep_exclude_tags=keep_exclude_tags, skip_inodes=skip_inodes,
-                                                restrict_dev=restrict_dev, read_special=read_special, dry_run=dry_run)
+                                            path=tag_path, parent_fd=child_fd, name=tag_name, fso=fso, cache=cache,
+                                            matcher=matcher, exclude_caches=exclude_caches,
+                                            exclude_if_present=exclude_if_present, keep_exclude_tags=keep_exclude_tags,
+                                            skip_inodes=skip_inodes, restrict_dev=restrict_dev,
+                                            read_special=read_special, dry_run=dry_run)
                                 self.print_file_status('x', path)
                             return
                     if not recurse_excluded_dir and not dry_run:
@@ -809,10 +814,10 @@ class Archiver:
                         for dirent in entries:
                             normpath = os.path.normpath(os.path.join(path, dirent.name))
                             self._rec_walk(
-                                    path=normpath, parent_fd=child_fd, name=dirent.name, fso=fso, cache=cache, matcher=matcher,
-                                    exclude_caches=exclude_caches, exclude_if_present=exclude_if_present,
-                                    keep_exclude_tags=keep_exclude_tags, skip_inodes=skip_inodes, restrict_dev=restrict_dev,
-                                    read_special=read_special, dry_run=dry_run)
+                                path=normpath, parent_fd=child_fd, name=dirent.name, fso=fso, cache=cache,
+                                matcher=matcher, exclude_caches=exclude_caches, exclude_if_present=exclude_if_present,
+                                keep_exclude_tags=keep_exclude_tags, skip_inodes=skip_inodes,
+                                restrict_dev=restrict_dev, read_special=read_special, dry_run=dry_run)
 
         except (BackupOSError, BackupError) as e:
             self.print_warning('%s: %s', path, e)
@@ -842,9 +847,11 @@ class Archiver:
         """Extract archive contents"""
         # be restrictive when restoring files, restore permissions later
         if sys.getfilesystemencoding() == 'ascii':
-            logger.warning('Warning: File system encoding is "ascii", extracting non-ascii filenames will not be supported.')
+            logger.warning('Warning: File system encoding is "ascii", extracting non-ascii filenames '
+                           'will not be supported.')
             if sys.platform.startswith(('linux', 'freebsd', 'netbsd', 'openbsd', 'darwin', )):
-                logger.warning('Hint: You likely need to fix your locale setup. E.g. install locales and use: LANG=en_US.UTF-8')
+                logger.warning('Hint: You likely need to fix your locale setup. E.g. install locales '
+                               'and use: LANG=en_US.UTF-8')
 
         matcher = self.build_matcher(args.patterns, args.paths)
 
@@ -867,8 +874,8 @@ class Archiver:
             # we do not extract the very first hardlink, so we need to remember the chunks
             # in hardlinks_master, so we can use them when we extract some 2nd+ hardlink item
             # that has no chunks list.
-            if ((not has_link or (partial_extract and not matched and hardlinkable(item.mode))) and
-                    (item.get('hardlink_master', True) and 'source' not in item)):
+            if ((not has_link or (partial_extract and not matched and hardlinkable(item.mode)))
+                    and (item.get('hardlink_master', True) and 'source' not in item)):
                 hardlink_masters[item.get('path')] = (item.get('chunks'), None)
 
         filter = self.build_filter(matcher, peek_and_store_hardlink_masters, strip_components)
@@ -1021,8 +1028,8 @@ class Archiver:
         hardlink_masters = {} if partial_extract else None
 
         def peek_and_store_hardlink_masters(item, matched):
-            if ((partial_extract and not matched and hardlinkable(item.mode)) and
-                    (item.get('hardlink_master', True) and 'source' not in item)):
+            if ((partial_extract and not matched and hardlinkable(item.mode))
+                    and (item.get('hardlink_master', True) and 'source' not in item)):
                 hardlink_masters[item.get('path')] = (item.get('chunks'), None)
 
         filter = self.build_filter(matcher, peek_and_store_hardlink_masters, strip_components)
@@ -1119,7 +1126,8 @@ class Archiver:
             elif modebits == stat.S_IFIFO:
                 tarinfo.type = tarfile.FIFOTYPE
             else:
-                self.print_warning('%s: unsupported file type %o for tar export', remove_surrogates(item.path), modebits)
+                self.print_warning('%s: unsupported file type %o for tar export',
+                                   remove_surrogates(item.path), modebits)
                 set_ec(EXIT_WARNING)
                 return None, stream
             return tarinfo, stream
@@ -1470,7 +1478,7 @@ class Archiver:
                                        Original size      Compressed size    Deduplicated size
                 This archive:   {stats[original_size]:>20s} {stats[compressed_size]:>20s} {stats[deduplicated_size]:>20s}
                 {cache}
-                """).strip().format(cache=cache, **info))
+                """).strip().format(cache=cache, **info))   # noqa: E501
             if self.exit_code:
                 break
             if not args.json and len(archive_names) - i:
@@ -1666,14 +1674,13 @@ class Archiver:
         recompress = args.recompress != 'never'
         always_recompress = args.recompress == 'always'
 
-        recreater = ArchiveRecreater(repository, manifest, key, cache, matcher,
-                                     exclude_caches=args.exclude_caches, exclude_if_present=args.exclude_if_present,
-                                     keep_exclude_tags=args.keep_exclude_tags, chunker_params=args.chunker_params,
-                                     compression=args.compression, recompress=recompress, always_recompress=always_recompress,
-                                     progress=args.progress, stats=args.stats,
-                                     file_status_printer=self.print_file_status,
-                                     checkpoint_interval=args.checkpoint_interval,
-                                     dry_run=args.dry_run, timestamp=args.timestamp)
+        recreater = ArchiveRecreater(
+            repository, manifest, key, cache, matcher, exclude_caches=args.exclude_caches,
+            exclude_if_present=args.exclude_if_present, keep_exclude_tags=args.keep_exclude_tags,
+            chunker_params=args.chunker_params, compression=args.compression, recompress=recompress,
+            always_recompress=always_recompress, progress=args.progress, stats=args.stats,
+            file_status_printer=self.print_file_status, checkpoint_interval=args.checkpoint_interval,
+            dry_run=args.dry_run, timestamp=args.timestamp)
 
         if args.location.archive:
             name = args.location.archive
@@ -2423,7 +2430,7 @@ class Archiver:
             especially when using the now/utcnow placeholders, since systemd performs its own
             %-based variable replacement even in quoted text. To avoid interference from systemd,
             double all percent signs (``{hostname}-{now:%Y-%m-%d_%H:%M:%S}``
-            becomes ``{hostname}-{now:%%Y-%%m-%%d_%%H:%%M:%%S}``).\n\n''')
+            becomes ``{hostname}-{now:%%Y-%%m-%%d_%%H:%%M:%%S}``).\n\n''')  # noqa: E501
     helptext['compression'] = textwrap.dedent('''
         It is no problem to mix different compression methods in one repo,
         deduplication is done on the source data chunks (not on the compressed
@@ -2623,7 +2630,8 @@ class Archiver:
                     is_append = kwargs['action'] == 'append'
                     if is_append:
                         self.append_options.add(kwargs['dest'])
-                        assert kwargs['default'] == [], 'The default is explicitly constructed as an empty list in resolve()'
+                        assert kwargs['default'] == [], \
+                            'The default is explicitly constructed as an empty list in resolve()'
                     else:
                         self.common_options.setdefault(suffix, set()).add(kwargs['dest'])
                     kwargs['dest'] += suffix
@@ -2809,10 +2817,10 @@ class Archiver:
 
             if sort_by:
                 sort_by_default = 'timestamp'
-                filters_group.add_argument('--sort-by', metavar='KEYS', dest='sort_by',
-                                           type=SortBySpec, default=sort_by_default,
-                                           help='Comma-separated list of sorting keys; valid keys are: {}; default is: {}'
-                                           .format(', '.join(AI_HUMAN_SORT_KEYS), sort_by_default))
+                filters_group.add_argument(
+                    '--sort-by', metavar='KEYS', dest='sort_by', type=SortBySpec, default=sort_by_default,
+                    help='Comma-separated list of sorting keys; valid keys are: {}; default is: {}'
+                    .format(', '.join(AI_HUMAN_SORT_KEYS), sort_by_default))
 
             if first_last:
                 group = filters_group.add_mutually_exclusive_group()
@@ -2834,13 +2842,11 @@ class Archiver:
                                 help='stay in foreground, do not daemonize')
             parser.add_argument('-o', dest='options', type=str,
                                 help='Extra mount options')
-            parser.add_argument('--numeric-owner', dest='numeric_ids', action='store_true',
-                                  help='deprecated, use ``--numeric-ids`` instead')
-            parser.add_argument('--numeric-ids', dest='numeric_ids', action='store_true',
-                                  help='use numeric user and group identifiers from archive(s)')
+            parser.add_argument('--numeric-owner', dest='numeric_owner', action='store_true',
+                                help='use numeric user and group identifiers from archive(s)')
             define_archive_filters_group(parser)
             parser.add_argument('paths', metavar='PATH', nargs='*', type=str,
-                                   help='paths to extract; patterns are supported')
+                                help='paths to extract; patterns are supported')
             define_exclusion_group(parser, strip_components=True)
 
         parser = argparse.ArgumentParser(prog=self.prog, description='Borg - Deduplicated Backups',
@@ -3076,8 +3082,8 @@ class Archiver:
         subparser.add_argument('--save-space', dest='save_space', action='store_true',
                                help='work slower, but using less space')
         subparser.add_argument('--max-duration', metavar='SECONDS', dest='max_duration',
-                                   type=int, default=0,
-                                   help='do only a partial repo check for max. SECONDS seconds (Default: unlimited)')
+                               type=int, default=0,
+                               help='do only a partial repo check for max. SECONDS seconds (Default: unlimited)')
         define_archive_filters_group(subparser)
 
         # borg compact
@@ -3146,9 +3152,9 @@ class Archiver:
 
         group = subparser.add_mutually_exclusive_group()
         group.add_argument('-d', '--delete', dest='delete', action='store_true',
-                               help='delete the key from the config file')
+                           help='delete the key from the config file')
         group.add_argument('-l', '--list', dest='list', action='store_true',
-                               help='list the configuration of the repo')
+                           help='list the configuration of the repo')
 
         subparser.add_argument('location', metavar='REPOSITORY', nargs='?', default='',
                                type=location_validator(archive=False, proto='file'),
@@ -3367,8 +3373,9 @@ class Archiver:
                                help='set user USER in archive for stdin data (default: %(default)r)')
         subparser.add_argument('--stdin-group', metavar='GROUP', dest='stdin_group', default=gid2group(0),
                                help='set group GROUP in archive for stdin data (default: %(default)r)')
-        subparser.add_argument('--stdin-mode', metavar='M', dest='stdin_mode', type=lambda s: int(s, 8), default=STDIN_MODE_DEFAULT,
-                              help='set mode to M in archive for stdin data (default: %(default)04o)')
+        subparser.add_argument('--stdin-mode', metavar='M', dest='stdin_mode', type=lambda s: int(s, 8),
+                               default=STDIN_MODE_DEFAULT,
+                               help='set mode to M in archive for stdin data (default: %(default)04o)')
         subparser.add_argument('--content-from-command', action='store_true',
                                help='interpret PATH as command and store its stdout. See also section Reading from'
                                     ' stdin below.')
@@ -3378,7 +3385,8 @@ class Archiver:
         subparser.add_argument('--paths-from-command', action='store_true',
                                help='interpret PATH as command and treat its output as ``--paths-from-stdin``')
         subparser.add_argument('--paths-delimiter', metavar='DELIM',
-                               help='set path delimiter for ``--paths-from-stdin`` and ``--paths-from-command`` (default: \\n) ')
+                               help='set path delimiter for ``--paths-from-stdin`` and ``--paths-from-command`` '
+                               '(default: \\n) ')
 
         exclude_group = define_exclusion_group(subparser, tag_files=True)
         exclude_group.add_argument('--exclude-nodump', dest='exclude_nodump', action='store_true',
@@ -3386,10 +3394,9 @@ class Archiver:
 
         fs_group = subparser.add_argument_group('Filesystem options')
         fs_group.add_argument('-x', '--one-file-system', dest='one_file_system', action='store_true',
-                              help='stay in the same file system and do not store mount points of other file systems.  This might behave different from your expectations, see the docs.')
-        fs_group.add_argument('--numeric-owner', dest='numeric_ids', action='store_true',
-                              help='deprecated, use ``--numeric-ids`` instead')
-        fs_group.add_argument('--numeric-ids', dest='numeric_ids', action='store_true',
+                              help='stay in the same file system and do not store mount points of other file systems.  '
+                              'This might behave different from your expectations, see the docs.')
+        fs_group.add_argument('--numeric-owner', dest='numeric_owner', action='store_true',
                               help='only store numeric user and group identifiers')
         # --noatime is the default now and the flag is deprecated. args.noatime is not used any more.
         # use --atime if you want to store the atime (default behaviour before borg 1.2.0a7)..
@@ -3410,7 +3417,7 @@ class Archiver:
         fs_group.add_argument('--noxattrs', dest='noxattrs', action='store_true',
                               help='do not read and store xattrs into archive')
         fs_group.add_argument('--sparse', dest='sparse', action='store_true',
-                               help='detect sparse holes in input (supported only by fixed chunker)')
+                              help='detect sparse holes in input (supported only by fixed chunker)')
         fs_group.add_argument('--files-cache', metavar='MODE', dest='files_cache_mode',
                               type=FilesCacheMode, default=DEFAULT_FILES_CACHE_MODE_UI,
                               help='operate files cache in MODE. default: %s' % DEFAULT_FILES_CACHE_MODE_UI)
@@ -3423,8 +3430,8 @@ class Archiver:
                                    help='add a comment text to the archive')
         archive_group.add_argument('--timestamp', metavar='TIMESTAMP', dest='timestamp',
                                    type=timestamp, default=None,
-                                   help='manually specify the archive creation date/time (UTC, yyyy-mm-ddThh:mm:ss format). '
-                                        'Alternatively, give a reference file/directory.')
+                                   help='manually specify the archive creation date/time '
+                                   '(UTC, yyyy-mm-ddThh:mm:ss format). Alternatively, give a reference file/directory.')
         archive_group.add_argument('-c', '--checkpoint-interval', metavar='SECONDS', dest='checkpoint_interval',
                                    type=int, default=1800,
                                    help='write checkpoint every SECONDS seconds (Default: 1800)')
@@ -3467,20 +3474,20 @@ class Archiver:
         already appended at the end of the traceback.
         """)
         subparser = debug_parsers.add_parser('info', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_info.__doc__,
-                                          epilog=debug_info_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='show system infos for debugging / bug reports (debug)')
+                                             description=self.do_debug_info.__doc__,
+                                             epilog=debug_info_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='show system infos for debugging / bug reports (debug)')
         subparser.set_defaults(func=self.do_debug_info)
 
         debug_dump_archive_items_epilog = process_epilog("""
         This command dumps raw (but decrypted and decompressed) archive items (only metadata) to files.
         """)
         subparser = debug_parsers.add_parser('dump-archive-items', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_dump_archive_items.__doc__,
-                                          epilog=debug_dump_archive_items_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='dump archive items (metadata) (debug)')
+                                             description=self.do_debug_dump_archive_items.__doc__,
+                                             epilog=debug_dump_archive_items_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='dump archive items (metadata) (debug)')
         subparser.set_defaults(func=self.do_debug_dump_archive_items)
         subparser.add_argument('location', metavar='ARCHIVE',
                                type=location_validator(archive=True),
@@ -3490,10 +3497,10 @@ class Archiver:
         This command dumps all metadata of an archive in a decoded form to a file.
         """)
         subparser = debug_parsers.add_parser('dump-archive', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_dump_archive.__doc__,
-                                          epilog=debug_dump_archive_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='dump decoded archive metadata (debug)')
+                                             description=self.do_debug_dump_archive.__doc__,
+                                             epilog=debug_dump_archive_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='dump decoded archive metadata (debug)')
         subparser.set_defaults(func=self.do_debug_dump_archive)
         subparser.add_argument('location', metavar='ARCHIVE',
                                type=location_validator(archive=True),
@@ -3505,10 +3512,10 @@ class Archiver:
         This command dumps manifest metadata of a repository in a decoded form to a file.
         """)
         subparser = debug_parsers.add_parser('dump-manifest', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_dump_manifest.__doc__,
-                                          epilog=debug_dump_manifest_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='dump decoded repository metadata (debug)')
+                                             description=self.do_debug_dump_manifest.__doc__,
+                                             epilog=debug_dump_manifest_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='dump decoded repository metadata (debug)')
         subparser.set_defaults(func=self.do_debug_dump_manifest)
         subparser.add_argument('location', metavar='REPOSITORY',
                                type=location_validator(archive=False),
@@ -3520,25 +3527,26 @@ class Archiver:
         This command dumps raw (but decrypted and decompressed) repo objects to files.
         """)
         subparser = debug_parsers.add_parser('dump-repo-objs', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_dump_repo_objs.__doc__,
-                                          epilog=debug_dump_repo_objs_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='dump repo objects (debug)')
+                                             description=self.do_debug_dump_repo_objs.__doc__,
+                                             epilog=debug_dump_repo_objs_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='dump repo objects (debug)')
         subparser.set_defaults(func=self.do_debug_dump_repo_objs)
         subparser.add_argument('location', metavar='REPOSITORY',
                                type=location_validator(archive=False),
                                help='repository to dump')
         subparser.add_argument('--ghost', dest='ghost', action='store_true',
-                               help='dump all segment file contents, including deleted/uncommitted objects and commits.')
+                               help='dump all segment file contents, including deleted/uncommitted '
+                                    'objects and commits.')
 
         debug_search_repo_objs_epilog = process_epilog("""
         This command searches raw (but decrypted and decompressed) repo objects for a specific bytes sequence.
         """)
         subparser = debug_parsers.add_parser('search-repo-objs', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_search_repo_objs.__doc__,
-                                          epilog=debug_search_repo_objs_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='search repo objects (debug)')
+                                             description=self.do_debug_search_repo_objs.__doc__,
+                                             epilog=debug_search_repo_objs_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='search repo objects (debug)')
         subparser.set_defaults(func=self.do_debug_search_repo_objs)
         subparser.add_argument('location', metavar='REPOSITORY',
                                type=location_validator(archive=False),
@@ -3550,10 +3558,10 @@ class Archiver:
         This command gets an object from the repository.
         """)
         subparser = debug_parsers.add_parser('get-obj', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_get_obj.__doc__,
-                                          epilog=debug_get_obj_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='get object from repository (debug)')
+                                             description=self.do_debug_get_obj.__doc__,
+                                             epilog=debug_get_obj_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='get object from repository (debug)')
         subparser.set_defaults(func=self.do_debug_get_obj)
         subparser.add_argument('location', metavar='REPOSITORY',
                                type=location_validator(archive=False),
@@ -3567,10 +3575,10 @@ class Archiver:
         This command puts objects into the repository.
         """)
         subparser = debug_parsers.add_parser('put-obj', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_put_obj.__doc__,
-                                          epilog=debug_put_obj_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='put object to repository (debug)')
+                                             description=self.do_debug_put_obj.__doc__,
+                                             epilog=debug_put_obj_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='put object to repository (debug)')
         subparser.set_defaults(func=self.do_debug_put_obj)
         subparser.add_argument('location', metavar='REPOSITORY',
                                type=location_validator(archive=False),
@@ -3582,10 +3590,10 @@ class Archiver:
         This command deletes objects from the repository.
         """)
         subparser = debug_parsers.add_parser('delete-obj', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_delete_obj.__doc__,
-                                          epilog=debug_delete_obj_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='delete object from repository (debug)')
+                                             description=self.do_debug_delete_obj.__doc__,
+                                             epilog=debug_delete_obj_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='delete object from repository (debug)')
         subparser.set_defaults(func=self.do_debug_delete_obj)
         subparser.add_argument('location', metavar='REPOSITORY',
                                type=location_validator(archive=False),
@@ -3597,10 +3605,10 @@ class Archiver:
         This command displays the reference count for objects from the repository.
         """)
         subparser = debug_parsers.add_parser('refcount-obj', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_refcount_obj.__doc__,
-                                          epilog=debug_refcount_obj_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='show refcount for object from repository (debug)')
+                                             description=self.do_debug_refcount_obj.__doc__,
+                                             epilog=debug_refcount_obj_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='show refcount for object from repository (debug)')
         subparser.set_defaults(func=self.do_debug_refcount_obj)
         subparser.add_argument('location', metavar='REPOSITORY',
                                type=location_validator(archive=False),
@@ -3612,10 +3620,10 @@ class Archiver:
         This command dumps the repository hints data.
         """)
         subparser = debug_parsers.add_parser('dump-hints', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_dump_hints.__doc__,
-                                          epilog=debug_dump_hints_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='dump repo hints (debug)')
+                                             description=self.do_debug_dump_hints.__doc__,
+                                             epilog=debug_dump_hints_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='dump repo hints (debug)')
         subparser.set_defaults(func=self.do_debug_dump_hints)
         subparser.add_argument('location', metavar='REPOSITORY',
                                type=location_validator(archive=False),
@@ -3627,10 +3635,10 @@ class Archiver:
         Convert a Borg profile to a Python cProfile compatible profile.
         """)
         subparser = debug_parsers.add_parser('convert-profile', parents=[common_parser], add_help=False,
-                                          description=self.do_debug_convert_profile.__doc__,
-                                          epilog=debug_convert_profile_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='convert Borg profile to Python profile (debug)')
+                                             description=self.do_debug_convert_profile.__doc__,
+                                             epilog=debug_convert_profile_epilog,
+                                             formatter_class=argparse.RawDescriptionHelpFormatter,
+                                             help='convert Borg profile to Python profile (debug)')
         subparser.set_defaults(func=self.do_debug_convert_profile)
         subparser.add_argument('input', metavar='INPUT', type=argparse.FileType('rb'),
                                help='Borg profile')
@@ -4059,10 +4067,10 @@ class Archiver:
         is damaged for some reason.
         """)
         subparser = key_parsers.add_parser('export', parents=[common_parser], add_help=False,
-                                          description=self.do_key_export.__doc__,
-                                          epilog=key_export_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='export repository key for backup')
+                                           description=self.do_key_export.__doc__,
+                                           epilog=key_export_epilog,
+                                           formatter_class=argparse.RawDescriptionHelpFormatter,
+                                           help='export repository key for backup')
         subparser.set_defaults(func=self.do_key_export)
         subparser.add_argument('location', metavar='REPOSITORY', nargs='?', default='',
                                type=location_validator(archive=False))
@@ -4090,10 +4098,10 @@ class Archiver:
         key import`` creates a new key file in ``$BORG_KEYS_DIR``.
         """)
         subparser = key_parsers.add_parser('import', parents=[common_parser], add_help=False,
-                                          description=self.do_key_import.__doc__,
-                                          epilog=key_import_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='import repository key from backup')
+                                           description=self.do_key_import.__doc__,
+                                           epilog=key_import_epilog,
+                                           formatter_class=argparse.RawDescriptionHelpFormatter,
+                                           help='import repository key from backup')
         subparser.set_defaults(func=self.do_key_import)
         subparser.add_argument('location', metavar='REPOSITORY', nargs='?', default='',
                                type=location_validator(archive=False))
@@ -4112,10 +4120,10 @@ class Archiver:
         does not protect future (nor past) backups to the same repository.
         """)
         subparser = key_parsers.add_parser('change-passphrase', parents=[common_parser], add_help=False,
-                                          description=self.do_change_passphrase.__doc__,
-                                          epilog=change_passphrase_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='change repository passphrase')
+                                           description=self.do_change_passphrase.__doc__,
+                                           epilog=change_passphrase_epilog,
+                                           formatter_class=argparse.RawDescriptionHelpFormatter,
+                                           help='change repository passphrase')
         subparser.set_defaults(func=self.do_change_passphrase)
         subparser.add_argument('location', metavar='REPOSITORY', nargs='?', default='',
                                type=location_validator(archive=False))
@@ -4139,10 +4147,10 @@ class Archiver:
         be derived from your (old) passphrase-mode passphrase.
         """)
         subparser = key_parsers.add_parser('migrate-to-repokey', parents=[common_parser], add_help=False,
-                                          description=self.do_migrate_to_repokey.__doc__,
-                                          epilog=migrate_to_repokey_epilog,
-                                          formatter_class=argparse.RawDescriptionHelpFormatter,
-                                          help='migrate passphrase-mode repository to repokey')
+                                           description=self.do_migrate_to_repokey.__doc__,
+                                           epilog=migrate_to_repokey_epilog,
+                                           formatter_class=argparse.RawDescriptionHelpFormatter,
+                                           help='migrate passphrase-mode repository to repokey')
         subparser.set_defaults(func=self.do_migrate_to_repokey)
         subparser.add_argument('location', metavar='REPOSITORY', nargs='?', default='',
                                type=location_validator(archive=False))
@@ -4174,7 +4182,7 @@ class Archiver:
                                           help='list archive or repository contents')
         subparser.set_defaults(func=self.do_list)
         subparser.add_argument('--consider-checkpoints', action='store_true', dest='consider_checkpoints',
-                help='Show checkpoint archives in the repository contents list (default: hidden).')
+                               help='Show checkpoint archives in the repository contents list (default: hidden).')
         subparser.add_argument('--short', dest='short', action='store_true',
                                help='only print file/directory names, nothing else')
         subparser.add_argument('--format', '--list-format', metavar='FORMAT', dest='format',
@@ -4201,10 +4209,10 @@ class Archiver:
         define_exclusion_group(subparser)
 
         subparser = subparsers.add_parser('mount', parents=[common_parser], add_help=False,
-                                        description=self.do_mount.__doc__,
-                                        epilog=mount_epilog,
-                                        formatter_class=argparse.RawDescriptionHelpFormatter,
-                                        help='mount repository')
+                                          description=self.do_mount.__doc__,
+                                          epilog=mount_epilog,
+                                          formatter_class=argparse.RawDescriptionHelpFormatter,
+                                          help='mount repository')
         define_borg_mount(subparser)
 
         # borg prune
@@ -4361,7 +4369,8 @@ class Archiver:
         subparser.add_argument('--list', dest='output_list', action='store_true',
                                help='output verbose list of items (files, dirs, ...)')
         subparser.add_argument('--filter', metavar='STATUSCHARS', dest='output_filter',
-                               help='only display items with the given status characters (listed in borg create --help)')
+                               help='only display items with the given status characters '
+                                    '(listed in borg create --help)')
         subparser.add_argument('-n', '--dry-run', dest='dry_run', action='store_true',
                                help='do not change anything')
         subparser.add_argument('-s', '--stats', dest='stats', action='store_true',
@@ -4381,8 +4390,8 @@ class Archiver:
                                    help='add a comment text to the archive')
         archive_group.add_argument('--timestamp', metavar='TIMESTAMP', dest='timestamp',
                                    type=timestamp, default=None,
-                                   help='manually specify the archive creation date/time (UTC, yyyy-mm-ddThh:mm:ss format). '
-                                        'alternatively, give a reference file/directory.')
+                                   help='manually specify the archive creation date/time (UTC, yyyy-mm-ddThh:mm:ss '
+                                        'format). Alternatively, give a reference file/directory.')
         archive_group.add_argument('-C', '--compression', metavar='COMPRESSION', dest='compression',
                                    type=CompressionSpec, default=CompressionSpec('lz4'),
                                    help='select compression algorithm, see the output of the '
@@ -4440,17 +4449,18 @@ class Archiver:
                                           help='start repository server process')
         subparser.set_defaults(func=self.do_serve)
         subparser.add_argument('--restrict-to-path', metavar='PATH', dest='restrict_to_paths', action='append',
-                               help='restrict repository access to PATH. '
-                                    'Can be specified multiple times to allow the client access to several directories. '
-                                    'Access to all sub-directories is granted implicitly; PATH doesn\'t need to directly point to a repository.')
-        subparser.add_argument('--restrict-to-repository', metavar='PATH', dest='restrict_to_repositories', action='append',
-                                help='restrict repository access. Only the repository located at PATH '
-                                     '(no sub-directories are considered) is accessible. '
-                                     'Can be specified multiple times to allow the client access to several repositories. '
-                                     'Unlike ``--restrict-to-path`` sub-directories are not accessible; '
-                                     'PATH needs to directly point at a repository location. '
-                                     'PATH may be an empty directory or the last element of PATH may not exist, in which case '
-                                     'the client may initialize a repository there.')
+                               help='restrict repository access to PATH. Can be specified multiple times to allow the '
+                                    'client access to several directories. Access to all sub-directories is granted '
+                                    'implicitly; PATH doesn\'t need to directly point to a repository.')
+        subparser.add_argument('--restrict-to-repository', metavar='PATH', dest='restrict_to_repositories',
+                               action='append',
+                               help='restrict repository access. Only the repository located at PATH '
+                                    '(no sub-directories are considered) is accessible. Can be specified multiple '
+                                    'times to allow the client access to several repositories. Unlike '
+                                    '``--restrict-to-path`` sub-directories are not accessible; PATH needs to '
+                                    'directly point at a repository location. PATH may be an empty directory or the '
+                                    'last element of PATH may not exist, in which case the client may initialize a '
+                                    'repository there.')
         subparser.add_argument('--append-only', dest='append_only', action='store_true',
                                help='only allow appending to repository segment files. Note that this only '
                                     'affects the low level structure of the repository, and running `delete` '
@@ -4851,7 +4861,7 @@ def main():  # pragma: no cover
                 msg = e.exception_full
             else:
                 msg = e.get_message()
-            tb = '\n'.join('Borg server: ' + l for l in e.sysinfo.splitlines())
+            tb = '\n'.join('Borg server: ' + line for line in e.sysinfo.splitlines())
             tb += "\n" + sysinfo()
             exit_code = EXIT_ERROR
         except Exception:
