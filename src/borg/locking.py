@@ -207,7 +207,8 @@ class ExclusiveLock:
                 if not self.kill_stale_locks:
                     if not self.stale_warning_printed:
                         # Log this at warning level to hint the user at the ability
-                        logger.warning("Found stale lock %s, but not deleting because self.kill_stale_locks = False.", name)
+                        logger.warning("Found stale lock %s, but not deleting because self.kill_stale_locks = False.",
+                                       name)
                         self.stale_warning_printed = True
                     return False
 
@@ -394,8 +395,7 @@ class Lock:
     def _wait_for_readers_finishing(self, remove, sleep):
         timer = TimeoutTimer(self.timeout, sleep).start()
         while True:
-            self._lock.acquire()
-            try:
+            with self._lock:
                 if remove is not None:
                     self._roster.modify(remove, REMOVE)
                 if len(self._roster.get(SHARED)) == 0:
@@ -403,12 +403,6 @@ class Lock:
                 # restore the roster state as before (undo the roster change):
                 if remove is not None:
                     self._roster.modify(remove, ADD)
-            except:
-                # avoid orphan lock when an exception happens here, e.g. Ctrl-C!
-                self._lock.release()
-                raise
-            else:
-                self._lock.release()
             if timer.timed_out_or_sleep():
                 raise LockTimeout(self.path)
 
