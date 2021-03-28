@@ -14,7 +14,7 @@ from itertools import islice
 
 from .constants import REPOSITORY_README, DEFAULT_SEGMENTS_PER_DIR, DEFAULT_MAX_SEGMENT_SIZE, MAX_SEGMENT_SIZE_LIMIT
 from .constants import MAX_OBJECT_SIZE, ISO_FORMAT, FD_MAX_AGE, MAX_DATA_SIZE
-from .constants import LIST_SCAN_LIMIT  # noqa: F401
+from .constants import LIST_SCAN_LIMIT  # noqa: F401 - rest of code imports this ref from here.
 from .hashindex import NSIndex
 from .helpers import Error, ErrorWithTraceback, IntegrityError, format_file_size, parse_file_size
 from .helpers import Location
