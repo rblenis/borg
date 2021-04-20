@@ -107,7 +107,7 @@ run into this by yourself by restoring an older copy of your repository.
 "attack": maybe an attacker has replaced your repo by an older copy, trying to
 trick you into AES counter reuse, trying to break your repo encryption.
 
-If you'ld decide to ignore this and accept unsafe operation for this repository,
+If you decide to ignore this and accept unsafe operation for this repository,
 you could delete the manifest-timestamp and the local cache:
 
 ::
